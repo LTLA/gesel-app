@@ -88,7 +88,6 @@ function App() {
                 }
             }
 
-            console.log(filters.species);
             if (nonempty) {
                 var gene_info = await gesel.searchGenes(filters.species, queries);
                 genes = [];
@@ -100,13 +99,13 @@ function App() {
                         genes.push(y);
                     }
 
-                    updated += x.processed;
+                    updated += queries[i];
                     if (x.length == 0) {
                         updated += " # ❌ no matching gene found";
                     }
                     updated += "\n";
 
-                    cleaned += x.processed + "\n";
+                    cleaned += queries[i] + "\n";
                 }
 
                 var copy = { ...filters, genes: updated };
@@ -119,19 +118,37 @@ function App() {
             setChosenGenes(null);
         } else {
             setChosenGenes(new Set(genes));
-            let found = await gesel.findOverlappingSets(filters.species, genes);
-            res = found.map(x => x.id);
+            res = await gesel.findOverlappingSets(filters.species, genes, { includeSize: true });
+
+            // Sorting by the overlap percentage, unless the count is 1, in
+            // which case we push that set to the back.
+            res.forEach(x => {
+                x._sorter = x.count / x.size;
+                if (x.count == 1) {
+                    x._sorter /= 1e8;
+                }
+            });
+            res.sort((left, right) => right._sorter - left._sorter);
+            res.forEach(x => delete x._sorter);
         }
 
         if (filters.text.match(/[\w]+/)) {
             let desc_matches = await gesel.searchSetText(filters.species, filters.text);
             if (res == null) {
-                res = desc_matches;
+                // TODO: expose fetchSetSizes() for use here.
+                res = desc_matches.map(i => { return { id: i } });
             } else {
-                res = gesel.intersect([res, desc_matches]);
+                let replacement = [];
+                let allowed = new Set(desc_matches);
+                for (const x of res) {
+                    if (res.has(x.id)) {
+                        replacement.push(x);
+                    }
+                }
             }
         }
 
+        // TODO: replace this section with a virtual table that calls fetchSingleSet().
         if (res != null) {
             if (res.length > 100) {
                 setLeftovers(res.length - 100);
@@ -139,9 +156,15 @@ function App() {
             } else {
                 setLeftovers(0);
             }
+            let deets = await gesel.fetchAllSets(filters.species);
+            res.forEach(x => {
+                x.name = deets[x.id].name;
+                x.description = deets[x.id].description;
+            });
         } else {
             res = [];
         }
+
         setResults(res);
 
         // Assembling a URL link.
@@ -185,18 +208,7 @@ function App() {
             wordWrap: "break-word"
         }}>
         <h3>Set details</h3>
-        <strong>Collection:</strong> {
-            selected === null ? 
-                "n/a" : 
-                (<a 
-                    href={"https://genomitory.genomics.science.roche.com/files/" + encodeURIComponent(selected.collection) + "/metadata"}
-                    target="_blank"
-                >
-                {selected.collection}
-                </a>)
-        }<br/>
-        <strong>Set number:</strong> {selected === null ? "n/a" : selected.number}<br/>
-        <strong>Species:</strong> {selected === null ? "n/a" : selected.species}<br/>
+        <strong>Collection:</strong> {selected === null ?  "n/a" : selected.collection}<br/>
         <strong>Name:</strong> {selected === null ? "n/a" : selected.name}<br/>
         <strong>Description:</strong> {selected === null ? "n/a" : selected.description}<br/>
         <strong>Size:</strong> {selected === null ? "n/a" : selected.size}
@@ -217,7 +229,8 @@ function App() {
                         return (
                             <tr>
                                 <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
-                                <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbols.join(", ")}</td>
+                                <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
+                                <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
                             </tr>
                         );
                     })
@@ -294,7 +307,6 @@ function App() {
             <Table striped bordered hover responsive style={{tableLayout: "fixed", width: "100%"}}>
                 <thead>
                     <tr>
-                        <th style={{ width: "15%" }}>Species</th>
                         <th style={{ width: "32%" }}>Name</th>
                         <th style={{ width: "40%" }}>Description</th>
                         <th style={{ width: "6%" }}>Size</th>
@@ -306,18 +318,28 @@ function App() {
                     results.map(x => {
                         return (
                             <tr onClick={() => { 
-                                gesel.fetchSingleSet(x.id).then(res => { setSelected(res); });
-                                gesel.fetchGenesForSet(x.id).then(async res => {
+                                gesel.fetchSingleSet(filters.species, x.id).then(async res => { 
+                                    let current_collection = await gesel.fetchSingleCollection(filters.species, res.collection);
+                                    setSelected({
+                                        name: res.name,
+                                        description: res.description,
+                                        size: res.size,
+                                        collection: current_collection.title
+                                    }); 
+                                });
+                                gesel.fetchGenesForSet(filters.species, x.id).then(async res => {
                                     let everything = await gesel.fetchAllGenes(filters.species);
                                     let ensembl = everything.get("ensembl");
                                     let entrez = everything.get("entrez");
                                     let symbol = everything.get("symbol");
-                                    setMembers(res.map(i => {
-                                        return { id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] }
-                                    }));
+
+                                    let new_members = [];
+                                    for (const i of res) {
+                                        new_members.push({ id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] });
+                                    }
+                                    setMembers(new_members);
                                 })
                             }}>
-                                <td>{x.species}</td>
                                 <td style={{"wordWrap": "break-word"}}>{x.name}</td>
                                 <td style={{"wordWrap": "break-word"}}>{x.description}</td>
                                 <td>{x.size}</td>
