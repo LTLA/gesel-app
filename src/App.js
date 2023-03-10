@@ -136,15 +136,19 @@ function App() {
             let desc_matches = await gesel.searchSetText(filters.species, filters.text);
             if (res == null) {
                 // TODO: expose fetchSetSizes() for use here.
-                res = desc_matches.map(i => { return { id: i } });
+                res = [];
+                for (const i of desc_matches) {
+                    res.push({ id: i });
+                }
             } else {
                 let replacement = [];
                 let allowed = new Set(desc_matches);
                 for (const x of res) {
-                    if (res.has(x.id)) {
+                    if (allowed.has(x.id)) {
                         replacement.push(x);
                     }
                 }
+                res = replacement;
             }
         }
 
