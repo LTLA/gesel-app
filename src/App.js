@@ -74,11 +74,11 @@ function App() {
         var cleaned = "";
         var genes = null;
 
-        if (filters.genes != "") {
+        if (filters.genes !== "") {
             var lines = filters.genes.split("\n");
             let queries = [];
             let nonempty = false;
-            for (var i = 0; i < lines.length; i++) {
+            for (let i = 0; i < lines.length; i++) {
                 var x = lines[i];
                 x = x.replace(/#.*/, "");
                 x = x.trim();
@@ -93,14 +93,14 @@ function App() {
                 genes = [];
                 var updated = "";
 
-                for (var i = 0; i < gene_info.length; i++) {
+                for (let i = 0; i < gene_info.length; i++) {
                     let x = gene_info[i];
                     for (const y of x) {
                         genes.push(y);
                     }
 
                     updated += queries[i];
-                    if (x.length == 0) {
+                    if (x.length === 0) {
                         updated += " # ❌ no matching gene found";
                     }
                     updated += "\n";
@@ -124,7 +124,7 @@ function App() {
             // which case we push that set to the back.
             res.forEach(x => {
                 x._sorter = x.count / x.size;
-                if (x.count == 1) {
+                if (x.count === 1) {
                     x._sorter /= 1e8;
                 }
             });
@@ -149,7 +149,7 @@ function App() {
         }
 
         // TODO: replace this section with a virtual table that calls fetchSingleSet().
-        if (res != null) {
+        if (res !== null) {
             if (res.length > 100) {
                 setLeftovers(res.length - 100);
                 res = res.slice(0, 100); // truncating for readability.
@@ -170,8 +170,8 @@ function App() {
         // Assembling a URL link.
         var query_params = [];
         for (const [key, val] of Object.entries(filters)) {
-            if (val != "") {
-                let val_ = (key == "genes" ? cleaned : val);
+            if (val !== "") {
+                let val_ = (key === "genes" ? cleaned : val);
                 query_params.push(key + "=" + encodeURIComponent(val_));
             }
         }
