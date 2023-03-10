@@ -119,26 +119,20 @@ function App() {
         } else {
             setChosenGenes(new Set(genes));
             res = await gesel.findOverlappingSets(filters.species, genes, { includeSize: true });
-
-            // Sorting by the overlap percentage, unless the count is 1, in
-            // which case we push that set to the back.
-            res.forEach(x => {
-                x._sorter = x.count / x.size;
-                if (x.count === 1) {
-                    x._sorter /= 1e8;
-                }
+            let ngenes = (await gesel.fetchAllGenes(filters.species)).get("ensembl").length;
+            res.forEach(x => { 
+                x.pvalue = gesel.testEnrichment(x.count, genes.length, x.size, ngenes); 
             });
-            res.sort((left, right) => right._sorter - left._sorter);
-            res.forEach(x => delete x._sorter);
+            res.sort((left, right) => left.pvalue - right.pvalue);
         }
 
         if (filters.text.match(/[\w]+/)) {
             let desc_matches = await gesel.searchSetText(filters.species, filters.text);
             if (res == null) {
-                // TODO: expose fetchSetSizes() for use here.
+                let sizes = await gesel.fetchSetSizes(filters.species);
                 res = [];
                 for (const i of desc_matches) {
-                    res.push({ id: i });
+                    res.push({ id: i, size: sizes[i] });
                 }
             } else {
                 let replacement = [];
@@ -264,7 +258,7 @@ function App() {
                             />
                             <Form.Text className="text-muted">
                             Enter a list of genes (Ensembl or Entrez IDs or symbols, one per line, text after <code>#</code> is ignored) and we'll find sets with overlaps.
-                            Sets are ranked by their percentage overlap with this list.
+                            Sets are ranked by the enrichment p-value.
                             </Form.Text>
                         </Form.Group>
                     </Form>
@@ -315,6 +309,7 @@ function App() {
                         <th style={{ width: "40%" }}>Description</th>
                         <th style={{ width: "6%" }}>Size</th>
                         <th style={{ width: "7%" }}>Overlap</th>
+                        <th style={{ width: "7%" }}>P-value</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -337,6 +332,7 @@ function App() {
                                     let entrez = everything.get("entrez");
                                     let symbol = everything.get("symbol");
 
+                                    console.log(res);
                                     let new_members = [];
                                     for (const i of res) {
                                         new_members.push({ id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] });
@@ -348,6 +344,7 @@ function App() {
                                 <td style={{"wordWrap": "break-word"}}>{x.description}</td>
                                 <td>{x.size}</td>
                                 <td>{"count" in x ? x.count : "n/a"}</td>
+                                <td>{"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}</td>
                             </tr>
                         );
                     })
