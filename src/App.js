@@ -117,7 +117,9 @@ function App() {
         if (genes === null) {
             setChosenGenes(null);
         } else {
-            setChosenGenes(new Set(genes));
+            let uniqued = new Set(genes);
+            setChosenGenes(uniqued);
+            genes = Array.from(uniqued);
             res = await gesel.findOverlappingSets(filters.species, genes, { includeSize: true });
             let ngenes = (await gesel.fetchAllGenes(filters.species)).get("ensembl").length;
             res.forEach(x => { 
