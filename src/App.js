@@ -229,19 +229,19 @@ function App() {
     return (
         <div style={{
             display: "grid",
-            gridTemplateColumns: "19% 60% 19%",
-            gap: "5px",
-            height: '100vh',
-            gridTemplateRows: "100vh"
+            gridTemplateColumns: "1fr 0.01fr 2fr 0.01fr 1fr"
         }}>
 
         <div style={{
-            overflow: "auto",
+            display: "grid",
             borderLeft: "solid grey 0.5px",
-            gridColumn: 3,
-            padding: "10px",
-            gridRow: 1,
-            wordWrap: "break-word"
+            gridTemplateRows: "1fr 5fr",
+            gridColumn: 5,
+            gridRow: 1
+        }}>
+        <div style={{
+            gridColumn: 1,
+            gridRow: 1
         }}>
         <h3>Set details</h3>
         <strong>Collection:</strong> {selected === null ?  "n/a" : selected.collection}<br/>
@@ -249,38 +249,47 @@ function App() {
         <strong>Description:</strong> {selected === null ? "n/a" : selected.description}<br/>
         <strong>Size:</strong> {selected === null ? "n/a" : selected.size}
         <hr/>
-        <Table striped bordered style={{tableLayout: "fixed", width: "100%"}}>
-            <thead>
-                <tr>
-                    <th style={{ wordWrap: "break-word", width: "33%" }}>Ensembl</th>
-                    <th style={{ wordWrap: "break-word", width: "33%" }}>Entrez</th>
-                    <th style={{ wordWrap: "break-word", width: "33%" }}>Symbol</th>
-                </tr>
-            </thead>
-            <tbody>
+        </div>
+        <div style={{
+            overflow: "auto",
+            gridColumn: 1,
+            gridRow: 2
+        }}>
+        <TableVirtuoso
+            totalCount={members.length}
+            fixedHeaderContent={(index, user) => {
+                return (
+                    <tr>
+                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Ensembl</th>
+                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Entrez</th>
+                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Symbol</th>
+                    </tr>
+                );
+            }}
+            itemContent={i => 
                 {
-                    selected === null ? "" :
-                    members.map(x => {
-                        let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
-                        return (
-                            <tr>
-                                <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
-                                <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
-                                <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
-                            </tr>
-                        );
-                    })
+                    let x = members[i];
+                    console.log(i);
+                    let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
+                    return (
+                        <>
+                            <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
+                            <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
+                            <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
+                        </>
+                    );
                 }
-            </tbody>
-        </Table>
+            }
+        />
+        </div>
         </div>
 
         <div style={{ 
             overflow: "auto",
             borderRight: "solid grey 0.5px",
             gridColumn: 1,
-            padding: "5px",
-            gridRow: 1
+            gridRow: 1,
+            padding: "5px"
         }}>
         <Form>
             <Form.Group className="mb-3" controlId="genesFilter">
@@ -335,7 +344,7 @@ function App() {
     </div>
 
     <div style={{ 
-        gridColumn: 2,
+        gridColumn: 3,
         gridRow: 1
     }}>
         <TableVirtuoso
