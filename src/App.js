@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
 import { TableVirtuoso } from 'react-virtuoso'
+import ClipLoader from "react-spinners/ClipLoader";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from "react"
 import * as gesel from "gesel";
@@ -57,6 +58,10 @@ function App() {
 
     const [ hovering, setHovering ] = useState(null);
 
+    const [ loadingSets, setLoadingSets ] = useState(false);
+
+    const [ loadingGenes, setLoadingGenes ] = useState(false);
+
     function wipeOnSpeciesChange() {
         setChosenGenes(null);
         setResults([]);
@@ -66,6 +71,8 @@ function App() {
     }
 
     async function searchSets(e) {
+        setLoadingSets(true);
+        setResults([]);
         if (e !== null) {
             e.preventDefault();
         }
@@ -167,6 +174,7 @@ function App() {
         }
         window.history.pushState("search results", "", "?" + query_params.join("&"));
 
+        setLoadingSets(false);
         return true;
     }
 
@@ -179,6 +187,7 @@ function App() {
     }, []);
 
     function focusSet(id, species) {
+        setLoadingGenes(true);
         gesel.fetchSingleSet(species, id).then(async res => { 
             let current_collection = await gesel.fetchSingleCollection(species, res.collection);
             setSelected({
@@ -200,6 +209,7 @@ function App() {
                 new_members.push({ id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] });
             }
             setMembers(new_members);
+            setLoadingGenes(false);
         })
     }
 
@@ -248,31 +258,44 @@ function App() {
             gridColumn: 1,
             gridRow: 2
         }}>
-        <TableVirtuoso
-            totalCount={members.length}
-            fixedHeaderContent={(index, user) => {
-                return (
-                    <tr>
-                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Ensembl</th>
-                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Entrez</th>
-                        <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Symbol</th>
-                    </tr>
-                );
-            }}
-            itemContent={i => 
-                {
-                    let x = members[i];
-                    let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
-                    return (
-                        <>
-                            <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
-                            <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
-                            <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
-                        </>
-                    );
-                }
-            }
-        />
+        {(
+            loadingGenes ? 
+                <div style={{textAlign:"center"}}>
+                    <ClipLoader
+                      color="#000000"
+                      loading={true}
+                      size={150}
+                      aria-label="Loading Spinner"
+                      data-testid="loader"
+                    />
+                </div>
+                :
+                <TableVirtuoso
+                    totalCount={members.length}
+                    fixedHeaderContent={(index, user) => {
+                        return (
+                            <tr>
+                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Ensembl</th>
+                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Entrez</th>
+                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Symbol</th>
+                            </tr>
+                        );
+                    }}
+                    itemContent={i => 
+                        {
+                            let x = members[i];
+                            let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
+                            return (
+                                <>
+                                    <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
+                                    <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
+                                    <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
+                                </>
+                            );
+                        }
+                    }
+                />
+        )}
         </div>
         </div>
 
@@ -342,68 +365,81 @@ function App() {
         gridColumn: 3,
         gridRow: 1
     }}>
-        <TableVirtuoso
-            totalCount={results.length}
-            fixedHeaderContent={(index, user) => (
-                <tr>
-                    <th style={{ background: "white", width: "500px" }}>Name</th>
-                    <th style={{ background: "white", width: "800px" }}>Description</th>
-                    <th style={{ background: "white", width: "100px" }}>Size</th>
-                    <th style={{ background: "white", width: "100px" }}>Overlap</th>
-                    <th style={{ background: "white", width: "100px" }}>P-value</th>
-                </tr>
-            )}
-            itemContent={i => 
-                {
-                    const x = results[i];
-                    return (
-                        <>
-                            
-                            <td 
-                                onMouseEnter={() => setHovering(x.id)} 
-                                onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, species)} 
-                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                            >
-                                {x.name}
-                            </td>
-                            <td 
-                                onMouseEnter={() => setHovering(x.id)} 
-                                onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, species)} 
-                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                            >
-                                {x.description}
-                            </td>
-                            <td 
-                                onMouseEnter={() => setHovering(x.id)} 
-                                onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, species)} 
-                                style={{"backgroundColor": defineBackground(x.id)}}
-                            >
-                                {x.size}
-                            </td>
-                            <td
-                                onMouseEnter={() => setHovering(x.id)} 
-                                onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, species)} 
-                                style={{"backgroundColor": defineBackground(x.id)}}
-                            >
-                                {"count" in x ? x.count : "n/a"}
-                            </td>
-                            <td 
-                                onMouseEnter={() => setHovering(x.id)} 
-                                onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, species)} 
-                                style={{"backgroundColor": defineBackground(x.id)}}
-                            >
-                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
-                            </td>
-                        </>
-                    );
-                }
-            }
-        />
+        {(
+            loadingSets ? 
+                <div style={{textAlign:"center"}}>
+                    <ClipLoader
+                      color="#000000"
+                      loading={true}
+                      size={150}
+                      aria-label="Loading Spinner"
+                      data-testid="loader"
+                    />
+                </div>
+                :
+                <TableVirtuoso
+                    totalCount={results.length}
+                    fixedHeaderContent={(index, user) => (
+                        <tr>
+                            <th style={{ background: "white", width: "500px" }}>Name</th>
+                            <th style={{ background: "white", width: "800px" }}>Description</th>
+                            <th style={{ background: "white", width: "100px" }}>Size</th>
+                            <th style={{ background: "white", width: "100px" }}>Overlap</th>
+                            <th style={{ background: "white", width: "100px" }}>P-value</th>
+                        </tr>
+                    )}
+                    itemContent={i => 
+                        {
+                            const x = results[i];
+                            return (
+                                <>
+                                    
+                                    <td 
+                                        onMouseEnter={() => setHovering(x.id)} 
+                                        onMouseLeave={() => unsetHovering(x.id)} 
+                                        onClick={() => focusSet(x.id, species)} 
+                                        style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                    >
+                                        {x.name}
+                                    </td>
+                                    <td 
+                                        onMouseEnter={() => setHovering(x.id)} 
+                                        onMouseLeave={() => unsetHovering(x.id)} 
+                                        onClick={() => focusSet(x.id, species)} 
+                                        style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                    >
+                                        {x.description}
+                                    </td>
+                                    <td 
+                                        onMouseEnter={() => setHovering(x.id)} 
+                                        onMouseLeave={() => unsetHovering(x.id)} 
+                                        onClick={() => focusSet(x.id, species)} 
+                                        style={{"backgroundColor": defineBackground(x.id)}}
+                                    >
+                                        {x.size}
+                                    </td>
+                                    <td
+                                        onMouseEnter={() => setHovering(x.id)} 
+                                        onMouseLeave={() => unsetHovering(x.id)} 
+                                        onClick={() => focusSet(x.id, species)} 
+                                        style={{"backgroundColor": defineBackground(x.id)}}
+                                    >
+                                        {"count" in x ? x.count : "n/a"}
+                                    </td>
+                                    <td 
+                                        onMouseEnter={() => setHovering(x.id)} 
+                                        onMouseLeave={() => unsetHovering(x.id)} 
+                                        onClick={() => focusSet(x.id, species)} 
+                                        style={{"backgroundColor": defineBackground(x.id)}}
+                                    >
+                                        {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                                    </td>
+                                </>
+                            );
+                        }
+                    }
+                />
+        )}
     </div>
     </div>
     );
