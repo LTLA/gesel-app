@@ -40,16 +40,13 @@ gesel.setGeneDownload(file => {
     return fetch(address); // TODO: add caching.
 });
 
-var initial_state = { 
-    "genes": retrieveFromURL("genes"),
-    "species": retrieveFromURL("species") || "9606",
-    "text": retrieveFromURL("text"),
-};
-
 function App() {
-    const [ filters, setFilters ] = useState(initial_state);
+    const [ species, setSpecies ] = useState(retrieveFromURL("species") || "9606");
 
-    // Everything below needs to be wiped when the species changes.
+    const [ searchText, setSearchText ] = useState(retrieveFromURL("text"));
+
+    const [ searchGenes, setSearchGenes ] = useState(retrieveFromURL("genes"));
+
     const [ chosenGenes, setChosenGenes ] = useState(null);
 
     const [ results, setResults ] = useState([]);
@@ -60,12 +57,12 @@ function App() {
 
     const [ hovering, setHovering ] = useState(null);
 
-    function copyAndSet(field) {
-        return (event) => {
-            var tmp = { ...filters };
-            tmp[field] = event.target.value;
-            setFilters(tmp);
-        };
+    function wipeOnSpeciesChange() {
+        setChosenGenes(null);
+        setResults([]);
+        setMembers([]);
+        setSelected(null);
+        setHovering(null);
     }
 
     async function searchSets(e) {
@@ -76,8 +73,8 @@ function App() {
         var cleaned = "";
         var genes = null;
 
-        if (filters.genes !== "") {
-            var lines = filters.genes.split("\n");
+        if (searchGenes !== "") {
+            var lines = searchGenes.split("\n");
             let queries = [];
             let nonempty = false;
             for (let i = 0; i < lines.length; i++) {
@@ -91,7 +88,7 @@ function App() {
             }
 
             if (nonempty) {
-                var gene_info = await gesel.searchGenes(filters.species, queries);
+                var gene_info = await gesel.searchGenes(species, queries);
                 genes = [];
                 var updated = "";
 
@@ -110,8 +107,7 @@ function App() {
                     cleaned += queries[i] + "\n";
                 }
 
-                var copy = { ...filters, genes: updated };
-                setFilters(copy);
+                setSearchGenes(updated);
             }
         }
 
@@ -122,18 +118,18 @@ function App() {
             let uniqued = new Set(genes);
             setChosenGenes(uniqued);
             genes = Array.from(uniqued);
-            res = await gesel.findOverlappingSets(filters.species, genes, { includeSize: true });
-            let ngenes = (await gesel.fetchAllGenes(filters.species)).get("ensembl").length;
+            res = await gesel.findOverlappingSets(species, genes, { includeSize: true });
+            let ngenes = (await gesel.fetchAllGenes(species)).get("ensembl").length;
             res.forEach(x => { 
                 x.pvalue = gesel.testEnrichment(x.count, genes.length, x.size, ngenes); 
             });
             res.sort((left, right) => left.pvalue - right.pvalue);
         }
 
-        if (filters.text.match(/[\w]+/)) {
-            let desc_matches = await gesel.searchSetText(filters.species, filters.text);
+        if (searchText.match(/[\w]+/)) {
+            let desc_matches = await gesel.searchSetText(species, searchText);
             if (res == null) {
-                let sizes = await gesel.fetchSetSizes(filters.species);
+                let sizes = await gesel.fetchSetSizes(species);
                 res = [];
                 for (const i of desc_matches) {
                     res.push({ id: i, size: sizes[i] });
@@ -153,7 +149,7 @@ function App() {
         if (res === null) {
             res = [];
         } else {
-            let deets = await gesel.fetchAllSets(filters.species);
+            let deets = await gesel.fetchAllSets(species);
             res.forEach(x => {
                 x.name = deets[x.id].name;
                 x.description = deets[x.id].description;
@@ -162,17 +158,14 @@ function App() {
         setResults(res);
 
         // Assembling a URL link.
-        var query_params = [];
-        for (const [key, val] of Object.entries(filters)) {
-            if (val !== "") {
-                let val_ = (key === "genes" ? cleaned : val);
-                query_params.push(key + "=" + encodeURIComponent(val_));
-            }
+        var query_params = [ "species=" + species ];
+        if (searchGenes !== "") {
+            query_params.push("genes=" + encodeURIComponent(cleaned));
         }
-
-        if (query_params.length) {
-            window.history.pushState("search results", "", "?" + query_params.join("&"));
+        if (searchText !== "") {
+            query_params.push("genes=" + encodeURIComponent(searchText));
         }
+        window.history.pushState("search results", "", "?" + query_params.join("&"));
 
         return true;
     }
@@ -269,7 +262,6 @@ function App() {
             itemContent={i => 
                 {
                     let x = members[i];
-                    console.log(i);
                     let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
                     return (
                         <>
@@ -297,9 +289,9 @@ function App() {
                 <Form.Control 
                     as="textarea"
                     placeholder="SNAP25&#10;Neurod6&#10;ATOH1&#10;ENSG00000142208"
-                    value={filters["genes"]}
+                    value={searchGenes}
                     rows={10}
-                    onChange={copyAndSet("genes")}
+                    onChange={e => setSearchGenes(e.target.value)}
                     style={{whiteSpace: "pre"}}
                 />
                 <Form.Text className="text-muted">
@@ -311,8 +303,11 @@ function App() {
                 <Form.Label>Filter by species</Form.Label>
                 <Form.Select 
                     aria-label="Species" 
-                    value={filters["species"]}
-                    onChange={copyAndSet("species")}
+                    value={species}
+                    onChange={e => {
+                        setSpecies(e.target.value);
+                        wipeOnSpeciesChange();
+                    }}
                 >
                     <option value="9606">Human</option>
                     <option value="10090">Mouse</option>
@@ -327,8 +322,8 @@ function App() {
                 <Form.Control 
                     type="text"
                     placeholder="MAPK"
-                    value={filters["text"]}
-                    onChange={copyAndSet("text")}
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
                 />
                 <Form.Text className="text-muted">
                 <code>*</code> and <code>?</code> wildcards are supported!
@@ -367,7 +362,7 @@ function App() {
                             <td 
                                 onMouseEnter={() => setHovering(x.id)} 
                                 onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, filters.species)} 
+                                onClick={() => focusSet(x.id, species)} 
                                 style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                             >
                                 {x.name}
@@ -375,7 +370,7 @@ function App() {
                             <td 
                                 onMouseEnter={() => setHovering(x.id)} 
                                 onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, filters.species)} 
+                                onClick={() => focusSet(x.id, species)} 
                                 style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                             >
                                 {x.description}
@@ -383,7 +378,7 @@ function App() {
                             <td 
                                 onMouseEnter={() => setHovering(x.id)} 
                                 onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, filters.species)} 
+                                onClick={() => focusSet(x.id, species)} 
                                 style={{"backgroundColor": defineBackground(x.id)}}
                             >
                                 {x.size}
@@ -391,7 +386,7 @@ function App() {
                             <td
                                 onMouseEnter={() => setHovering(x.id)} 
                                 onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, filters.species)} 
+                                onClick={() => focusSet(x.id, species)} 
                                 style={{"backgroundColor": defineBackground(x.id)}}
                             >
                                 {"count" in x ? x.count : "n/a"}
@@ -399,7 +394,7 @@ function App() {
                             <td 
                                 onMouseEnter={() => setHovering(x.id)} 
                                 onMouseLeave={() => unsetHovering(x.id)} 
-                                onClick={() => focusSet(x.id, filters.species)} 
+                                onClick={() => focusSet(x.id, species)} 
                                 style={{"backgroundColor": defineBackground(x.id)}}
                             >
                                 {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
