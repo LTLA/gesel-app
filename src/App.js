@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col"
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
+import { TableVirtuoso } from 'react-virtuoso'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from "react"
 import * as gesel from "gesel";
@@ -48,15 +49,16 @@ var initial_state = {
 function App() {
     const [ filters, setFilters ] = useState(initial_state);
 
-    const [ results, setResults ] = useState([]);
-
-    const [ leftovers, setLeftovers ] = useState(0);
-
+    // Everything below needs to be wiped when the species changes.
     const [ chosenGenes, setChosenGenes ] = useState(null);
+
+    const [ results, setResults ] = useState([]);
 
     const [ members, setMembers ] = useState([]);
 
     const [ selected, setSelected ] = useState(null);
+
+    const [ hovering, setHovering ] = useState(null);
 
     function copyAndSet(field) {
         return (event) => {
@@ -148,23 +150,15 @@ function App() {
             }
         }
 
-        // TODO: replace this section with a virtual table that calls fetchSingleSet().
-        if (res !== null) {
-            if (res.length > 100) {
-                setLeftovers(res.length - 100);
-                res = res.slice(0, 100); // truncating for readability.
-            } else {
-                setLeftovers(0);
-            }
+        if (res === null) {
+            res = [];
+        } else {
             let deets = await gesel.fetchAllSets(filters.species);
             res.forEach(x => {
                 x.name = deets[x.id].name;
                 x.description = deets[x.id].description;
             });
-        } else {
-            res = [];
         }
-
         setResults(res);
 
         // Assembling a URL link.
@@ -191,18 +185,60 @@ function App() {
         }
     }, []);
 
+    function focusSet(id, species) {
+        gesel.fetchSingleSet(species, id).then(async res => { 
+            let current_collection = await gesel.fetchSingleCollection(species, res.collection);
+            setSelected({
+                id: id,
+                name: res.name,
+                description: res.description,
+                size: res.size,
+                collection: current_collection.title
+            }); 
+        });
+        gesel.fetchGenesForSet(species, id).then(async res => {
+            let everything = await gesel.fetchAllGenes(species);
+            let ensembl = everything.get("ensembl");
+            let entrez = everything.get("entrez");
+            let symbol = everything.get("symbol");
+
+            let new_members = [];
+            for (const i of res) {
+                new_members.push({ id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] });
+            }
+            setMembers(new_members);
+        })
+    }
+
+    function defineBackground(id) {
+        if (selected !== null && id == selected.id) {
+            return "#cdc2c0"
+        } else if (hovering !== null && id == hovering) {
+            return "#add8e6";
+        } else {
+            return "#00000000";
+        }
+    }
+
+    function unsetHovering(id) {
+        if (id == hovering) {
+            setHovering(null);
+        }
+    }
+
     return (
         <div style={{
             display: "grid",
-            gridTemplateColumns: "80% 19%",
+            gridTemplateColumns: "19% 60% 19%",
             gap: "5px",
             height: '100vh',
             gridTemplateRows: "100vh"
         }}>
+
         <div style={{
             overflow: "auto",
             borderLeft: "solid grey 0.5px",
-            gridColumn: 2,
+            gridColumn: 3,
             padding: "10px",
             gridRow: 1,
             wordWrap: "break-word"
@@ -238,129 +274,134 @@ function App() {
             </tbody>
         </Table>
         </div>
+
         <div style={{ 
             overflow: "auto",
+            borderRight: "solid grey 0.5px",
             gridColumn: 1,
             padding: "5px",
             gridRow: 1
         }}>
-        <Container>
-            <Row>
-                <Col>
-                    <Form>
-                        <Form.Group className="mb-3" controlId="genesFilter">
-                            <Form.Label>Filter by genes</Form.Label>
-                            <Form.Control 
-                                as="textarea"
-                                placeholder="SNAP25&#10;Neurod6&#10;ATOH1&#10;ENSG00000142208"
-                                value={filters["genes"]}
-                                rows={10}
-                                onChange={copyAndSet("genes")}
-                                style={{whiteSpace: "pre"}}
-                            />
-                            <Form.Text className="text-muted">
-                            Enter a list of genes (Ensembl or Entrez IDs or symbols, one per line, text after <code>#</code> is ignored) and we'll find sets with overlaps.
-                            Sets are ranked by the enrichment p-value.
-                            </Form.Text>
-                        </Form.Group>
-                    </Form>
-                </Col>
-                <Col>
-                    <Form>
-                        <Form.Group className="mb-3" controlId="speciesFilter">
-                            <Form.Label>Filter by species</Form.Label>
-                            <Form.Select 
-                                aria-label="Species" 
-                                value={filters["species"]}
-                                onChange={copyAndSet("species")}
-                            >
-                                <option value="9606">Human</option>
-                                <option value="10090">Mouse</option>
-                                <option value="7227">Fly</option>
-                                <option value="6239">C. elegans</option>
-                                <option value="7955">Zebrafish</option>
-                                <option value="9598">Chimpanzee</option>
-                            </Form.Select>
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="collectionFilter">
-                            <Form.Label>Name or description</Form.Label>
-                            <Form.Control 
-                                type="text"
-                                placeholder="MAPK"
-                                value={filters["text"]}
-                                onChange={copyAndSet("text")}
-                            />
-                            <Form.Text className="text-muted">
-                            <code>*</code> and <code>?</code> wildcards are supported!
-                            </Form.Text>
-                        </Form.Group>
-                        <Form.Group>
-                            <Form.Label></Form.Label><br/>
-                            <Button variant="primary" type="search" onClick={searchSets}>
-                               Search 
-                            </Button>
-                        </Form.Group>
-                    </Form>
-                </Col>
-            </Row>
-            <hr/>
-            <Table striped bordered hover responsive style={{tableLayout: "fixed", width: "100%"}}>
-                <thead>
-                    <tr>
-                        <th style={{ width: "32%" }}>Name</th>
-                        <th style={{ width: "40%" }}>Description</th>
-                        <th style={{ width: "6%" }}>Size</th>
-                        <th style={{ width: "7%" }}>Overlap</th>
-                        <th style={{ width: "7%" }}>P-value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {
-                    results.map(x => {
-                        return (
-                            <tr onClick={() => { 
-                                gesel.fetchSingleSet(filters.species, x.id).then(async res => { 
-                                    let current_collection = await gesel.fetchSingleCollection(filters.species, res.collection);
-                                    setSelected({
-                                        name: res.name,
-                                        description: res.description,
-                                        size: res.size,
-                                        collection: current_collection.title
-                                    }); 
-                                });
-                                gesel.fetchGenesForSet(filters.species, x.id).then(async res => {
-                                    let everything = await gesel.fetchAllGenes(filters.species);
-                                    let ensembl = everything.get("ensembl");
-                                    let entrez = everything.get("entrez");
-                                    let symbol = everything.get("symbol");
+        <Form>
+            <Form.Group className="mb-3" controlId="genesFilter">
+                <Form.Label>Filter by genes</Form.Label>
+                <Form.Control 
+                    as="textarea"
+                    placeholder="SNAP25&#10;Neurod6&#10;ATOH1&#10;ENSG00000142208"
+                    value={filters["genes"]}
+                    rows={10}
+                    onChange={copyAndSet("genes")}
+                    style={{whiteSpace: "pre"}}
+                />
+                <Form.Text className="text-muted">
+                Enter a list of genes (Ensembl or Entrez IDs or symbols, one per line, text after <code>#</code> is ignored) and we'll find sets with overlaps.
+                Sets are ranked by the enrichment p-value.
+                </Form.Text>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="speciesFilter">
+                <Form.Label>Filter by species</Form.Label>
+                <Form.Select 
+                    aria-label="Species" 
+                    value={filters["species"]}
+                    onChange={copyAndSet("species")}
+                >
+                    <option value="9606">Human</option>
+                    <option value="10090">Mouse</option>
+                    <option value="7227">Fly</option>
+                    <option value="6239">C. elegans</option>
+                    <option value="7955">Zebrafish</option>
+                    <option value="9598">Chimpanzee</option>
+                </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="collectionFilter">
+                <Form.Label>Name or description</Form.Label>
+                <Form.Control 
+                    type="text"
+                    placeholder="MAPK"
+                    value={filters["text"]}
+                    onChange={copyAndSet("text")}
+                />
+                <Form.Text className="text-muted">
+                <code>*</code> and <code>?</code> wildcards are supported!
+                </Form.Text>
+            </Form.Group>
+            <Form.Group>
+                <Form.Label></Form.Label><br/>
+                <Button variant="primary" type="search" onClick={searchSets}>
+                   Search 
+                </Button>
+            </Form.Group>
+        </Form>
+    </div>
 
-                                    console.log(res);
-                                    let new_members = [];
-                                    for (const i of res) {
-                                        new_members.push({ id: i, ensembl: ensembl[i], symbol: symbol[i], entrez: entrez[i] });
-                                    }
-                                    setMembers(new_members);
-                                })
-                            }}>
-                                <td style={{"wordWrap": "break-word"}}>{x.name}</td>
-                                <td style={{"wordWrap": "break-word"}}>{x.description}</td>
-                                <td>{x.size}</td>
-                                <td>{"count" in x ? x.count : "n/a"}</td>
-                                <td>{"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}</td>
-                            </tr>
-                        );
-                    })
+    <div style={{ 
+        gridColumn: 2,
+        gridRow: 1
+    }}>
+        <TableVirtuoso
+            totalCount={results.length}
+            fixedHeaderContent={(index, user) => (
+                <tr>
+                    <th style={{ background: "white", width: "500px" }}>Name</th>
+                    <th style={{ background: "white", width: "800px" }}>Description</th>
+                    <th style={{ background: "white", width: "100px" }}>Size</th>
+                    <th style={{ background: "white", width: "100px" }}>Overlap</th>
+                    <th style={{ background: "white", width: "100px" }}>P-value</th>
+                </tr>
+            )}
+            itemContent={i => 
+                {
+                    const x = results[i];
+                    return (
+                        <>
+                            
+                            <td 
+                                onMouseEnter={() => setHovering(x.id)} 
+                                onMouseLeave={() => unsetHovering(x.id)} 
+                                onClick={() => focusSet(x.id, filters.species)} 
+                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                            >
+                                {x.name}
+                            </td>
+                            <td 
+                                onMouseEnter={() => setHovering(x.id)} 
+                                onMouseLeave={() => unsetHovering(x.id)} 
+                                onClick={() => focusSet(x.id, filters.species)} 
+                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                            >
+                                {x.description}
+                            </td>
+                            <td 
+                                onMouseEnter={() => setHovering(x.id)} 
+                                onMouseLeave={() => unsetHovering(x.id)} 
+                                onClick={() => focusSet(x.id, filters.species)} 
+                                style={{"backgroundColor": defineBackground(x.id)}}
+                            >
+                                {x.size}
+                            </td>
+                            <td
+                                onMouseEnter={() => setHovering(x.id)} 
+                                onMouseLeave={() => unsetHovering(x.id)} 
+                                onClick={() => focusSet(x.id, filters.species)} 
+                                style={{"backgroundColor": defineBackground(x.id)}}
+                            >
+                                {"count" in x ? x.count : "n/a"}
+                            </td>
+                            <td 
+                                onMouseEnter={() => setHovering(x.id)} 
+                                onMouseLeave={() => unsetHovering(x.id)} 
+                                onClick={() => focusSet(x.id, filters.species)} 
+                                style={{"backgroundColor": defineBackground(x.id)}}
+                            >
+                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                            </td>
+                        </>
+                    );
                 }
-            </tbody>
-            </Table>
-            {
-                leftovers > 0 ? 
-                    (<p>... and {leftovers} more sets</p>) :
-                    ""
             }
-        </Container>
-        </div>
-        </div>
+        />
+    </div>
+    </div>
     );
 }
 
