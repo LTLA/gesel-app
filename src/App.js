@@ -236,7 +236,7 @@ function App() {
             query_params.push("genes=" + encodeURIComponent(cleaned));
         }
         if (searchText !== "") {
-            query_params.push("genes=" + encodeURIComponent(searchText));
+            query_params.push("text=" + encodeURIComponent(searchText));
         }
         if (inactiveCollections.size > 0) {
             query_params.push("ignore=" + Array.from(inactiveCollections).join(","));
