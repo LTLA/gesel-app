@@ -61,6 +61,7 @@ gesel.setGeneDownload(async file => {
 const taxonomy2ensembl = {
     "9606": "Homo_sapiens",
     "10090": "Mus_musculus",
+    "10116": "Rattus_norvegicus",
     "7227": "Drosophila_melanogaster",
     "6239": "Caenorhabditis_elegans",
     "7955": "Danio_rerio",
@@ -414,6 +415,7 @@ function App() {
                     <option value="9606">Human</option>
                     <option value="10090">Mouse</option>
                     <option value="7227">Fly</option>
+                    <option value="10116">Rat</option>
                     <option value="6239">C. elegans</option>
                     <option value="7955">Zebrafish</option>
                     <option value="9598">Chimpanzee</option>
