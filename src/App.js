@@ -41,6 +41,15 @@ gesel.setGeneDownload(file => {
     return fetch(address); // TODO: add caching.
 });
 
+const taxonomy2ensembl = {
+    "9606": "Homo_sapiens",
+    "10090": "Mus_musculus",
+    "7227": "Drosophila_melanogaster",
+    "6239": "Caenorhabditis_elegans",
+    "7955": "Danio_rerio",
+    "9598": "Pan_troglodytes"
+};
+
 function App() {
     const [ species, setSpecies ] = useState(retrieveFromURL("species") || "9606");
 
@@ -57,6 +66,8 @@ function App() {
     const [ selected, setSelected ] = useState(null);
 
     const [ hovering, setHovering ] = useState(null);
+
+    const [ hoveringGene, setHoveringGene ] = useState(null);
 
     const [ loadingSets, setLoadingSets ] = useState(false);
 
@@ -229,6 +240,15 @@ function App() {
         }
     }
 
+    function defineBackgroundGene(id) {
+    }
+
+    function unsetHoveringGene(id) {
+        if (id == hoveringGene) {
+            setHoveringGene(null);
+        }
+    }
+
     return (
         <div style={{
             display: "grid",
@@ -284,12 +304,54 @@ function App() {
                     itemContent={i => 
                         {
                             let x = members[i];
-                            let is_in = (chosenGenes === null || !chosenGenes.has(x.id));
+                            let style = { "backgroundColor":  (hoveringGene !== null && x.id == hoveringGene ? "#add8e6" : "#00000000") };
+                            let combinedStyle = style;
+                            let textStyle = {};
+                            if (chosenGenes !== null && chosenGenes.has(x.id)) {
+                                textStyle = { fontWeight: "bold", color: "red" };
+                                combinedStyle = { ...style, ...textStyle } 
+                            }
+
+                            let all_entrez = [];
+                            for (var i = 0; i < x.entrez.length; i++) {
+                                if (i > 0) {
+                                    all_entrez.push(", ");
+                                }
+                                all_entrez.push(<a target="_blank" style={textStyle} href={"https://www.ncbi.nlm.nih.gov/gene/" + x.entrez[i]}>{x.entrez[i]}</a>)
+                            }
+
+                            let all_ensembl = [];
+                            let ens_species = taxonomy2ensembl[species];
+                            for (var i = 0; i < x.ensembl.length; i++) {
+                                if (i > 0) {
+                                    all_ensembl.push(", ");
+                                }
+                                all_ensembl.push(<a target="_blank" style={textStyle} href={"https://ensembl.org/" + ens_species + "/Gene/Summary?g=" + x.ensembl[i]}>{x.ensembl[i]}</a>);
+                            }
+
                             return (
                                 <>
-                                    <td style={is_in ? {} : {"font-weight": "bold"}}>{x.ensembl.join(", ")}</td>
-                                    <td style={is_in ? {} : {"font-weight": "bold"}}>{x.entrez.join(", ")}</td>
-                                    <td style={is_in ? {} : {color: "red", "font-weight": "bold"}}>{x.symbol.join(", ")}</td>
+                                    <td 
+                                        onMouseEnter={() => setHoveringGene(x.id)} 
+                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                        style={style}
+                                    >
+                                        {all_ensembl}
+                                    </td>
+                                    <td 
+                                        onMouseEnter={() => setHoveringGene(x.id)} 
+                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                        style={style}
+                                    >
+                                        {all_entrez}
+                                    </td>
+                                    <td 
+                                        onMouseEnter={() => setHoveringGene(x.id)} 
+                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                        style={combinedStyle}
+                                    >
+                                        {x.symbol.join(", ")}
+                                    </td>
                                 </>
                             );
                         }
