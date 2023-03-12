@@ -155,7 +155,7 @@ function App() {
             setChosenGenes(uniqued);
             genes = Array.from(uniqued);
             res = await gesel.findOverlappingSets(species, genes, { includeSize: true });
-            let ngenes = (await gesel.fetchAllGenes(species)).get("ensembl").length;
+            let ngenes = await gesel.effectiveNumberOfGenes(species);
             res.forEach(x => { 
                 x.pvalue = gesel.testEnrichment(x.count, genes.length, x.size, ngenes); 
             });
