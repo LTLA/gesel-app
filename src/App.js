@@ -26,19 +26,36 @@ function retrieveFromURL(key) {
 }
 
 const proxy = "https://cors-proxy.aaron-lun.workers.dev";
+const ref_url = gesel.referenceBaseUrl();
+const ref_key = ref_url.substr(ref_url.lastIndexOf("/") + 1);
+const gene_url = gesel.geneBaseUrl();
+const gene_key = gene_url.substr(gene_url.lastIndexOf("/") + 1);
 
-gesel.setReferenceDownload((file, start, end) => {
-    let address = proxy + "/" + encodeURIComponent(gesel.referenceBaseUrl() + "/" + file);
+gesel.setReferenceDownload(async (file, start, end) => {
+    let address = proxy + "/" + encodeURIComponent(ref_url + "/" + file);
     if (start == null || end == null) {
-        return fetch(address); // TODO: add caching.
+        let cache = await caches.open(ref_key);
+        let existing = await cache.match(address);
+        if (typeof existing == "undefined") {
+            existing = await fetch(address); 
+            cache.put(ref_key, existing.clone());
+        }
+        return existing;
     } else {
         return fetch(address + "?start=" + String(start) + "&end=" + String(end));
     }
 });
 
-gesel.setGeneDownload(file => {
-    let address = proxy + "/" + encodeURIComponent(gesel.geneBaseUrl() + "/" + file);
-    return fetch(address); // TODO: add caching.
+gesel.setGeneDownload(async file => {
+    let address = proxy + "/" + encodeURIComponent(gene_url + "/" + file);
+    let cache = await caches.open(gene_key);
+    let existing = await cache.match(address);
+    console.log(existing);
+    if (typeof existing == "undefined") {
+        existing = await fetch(address); 
+        cache.put(gene_key, existing.clone());
+    }
+    return existing;
 });
 
 const taxonomy2ensembl = {
@@ -443,11 +460,11 @@ function App() {
                     totalCount={results.length}
                     fixedHeaderContent={(index, user) => (
                         <tr>
-                            <th style={{ background: "white", width: "500px" }}>Name</th>
-                            <th style={{ background: "white", width: "800px" }}>Description</th>
-                            <th style={{ background: "white", width: "100px" }}>Size</th>
-                            <th style={{ background: "white", width: "100px" }}>Overlap</th>
-                            <th style={{ background: "white", width: "100px" }}>P-value</th>
+                            <th style={{ background: "white", width: "20%" }}>Name</th>
+                            <th style={{ background: "white", width: "50%" }}>Description</th>
+                            <th style={{ background: "white", width: "10%" }}>Size</th>
+                            <th style={{ background: "white", width: "10%" }}>Overlap</th>
+                            <th style={{ background: "white", width: "10%" }}>P-value</th>
                         </tr>
                     )}
                     itemContent={i => 
