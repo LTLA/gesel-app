@@ -25,6 +25,17 @@ function retrieveFromURL(key) {
     }
 }
 
+function createIgnoreList() {
+    let ignored = retrieveFromURL("ignore");
+    let output = new Set;
+    if (ignored !== "") {
+        for (const x of ignored.split(",")) {
+            output.add(Number(x));
+        }
+    }
+    return output;
+}
+
 const proxy = "https://cors-proxy.aaron-lun.workers.dev";
 const ref_url = gesel.referenceBaseUrl();
 const ref_key = ref_url.substr(ref_url.lastIndexOf("/") + 1);
@@ -77,6 +88,10 @@ function App() {
 
     const [ chosenGenes, setChosenGenes ] = useState(null);
 
+    const [ collections, setCollections ] = useState(null);
+
+    const [ inactiveCollections, setInactiveCollections ] = useState(createIgnoreList());
+
     const [ results, setResults ] = useState([]);
 
     const [ members, setMembers ] = useState([]);
@@ -93,10 +108,19 @@ function App() {
 
     function wipeOnSpeciesChange() {
         setChosenGenes(null);
+        setCollections(null);
+        setInactiveCollections(new Set);
         setResults([]);
         setMembers([]);
         setSelected(null);
         setHovering(null);
+    }
+
+    function setCollections2(species) {
+        gesel.fetchAllCollections(species).then(res => { 
+            console.log(res);
+            setCollections(res);
+        });
     }
 
     async function searchSets(e) {
@@ -189,8 +213,21 @@ function App() {
             res.forEach(x => {
                 x.name = deets[x.id].name;
                 x.description = deets[x.id].description;
+                x.collection = deets[x.id].collection;
             });
         }
+
+        if (inactiveCollections.size > 0) {
+            let replacement = [];
+            for (const r of res) {
+                console.log(r);
+                if (!inactiveCollections.has(r.collection)) {
+                    replacement.push(r);
+                }
+            }
+            res = replacement;
+        }
+
         setResults(res);
 
         // Assembling a URL link.
@@ -200,6 +237,9 @@ function App() {
         }
         if (searchText !== "") {
             query_params.push("genes=" + encodeURIComponent(searchText));
+        }
+        if (inactiveCollections.size > 0) {
+            query_params.push("ignore=" + Array.from(inactiveCollections).join(","));
         }
         window.history.pushState("search results", "", "?" + query_params.join("&"));
 
@@ -256,9 +296,6 @@ function App() {
         if (id == hovering) {
             setHovering(null);
         }
-    }
-
-    function defineBackgroundGene(id) {
     }
 
     function unsetHoveringGene(id) {
@@ -409,6 +446,7 @@ function App() {
                     value={species}
                     onChange={e => {
                         setSpecies(e.target.value);
+                        setCollections2(e.target.value); // default value.
                         wipeOnSpeciesChange();
                     }}
                 >
@@ -432,6 +470,32 @@ function App() {
                 <Form.Text className="text-muted">
                 <code>*</code> and <code>?</code> wildcards are supported!
                 </Form.Text>
+            </Form.Group>
+            <Form.Group>
+                <Form.Label>Available collections</Form.Label><br/>
+                {(
+                    collections == null ?
+                        ""
+                        :
+                        collections.map((x, i) => {
+                            let available = !inactiveCollections.has(i);
+                            return (
+                                <Form.Check
+                                    label={x.title}
+                                    checked={available}
+                                    onChange={() => {
+                                        let replacement = new Set(inactiveCollections);
+                                        if (inactiveCollections.has(i)) {
+                                            replacement.delete(i);
+                                        } else {
+                                            replacement.add(i);
+                                        }
+                                        setInactiveCollections(replacement);
+                                    }}
+                                />
+                            )
+                        })
+                )}
             </Form.Group>
             <Form.Group>
                 <Form.Label></Form.Label><br/>
