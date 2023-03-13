@@ -372,8 +372,9 @@ function App() {
                         />
                     </Form.Group>
                     {
-                        collections !== null && <Form.Group style={{height: "calc(100vh - 550px)", overflowY: "auto", marginBottom: "5px"}}>
+                        collections !== null && <Form.Group>
                             <Form.Label>Available collections</Form.Label><br/>
+                            <div style={{height: "calc(100vh - 590px)", overflowY: "auto", marginBottom: "5px"}}>
                             {
                                 collections.map((x, i) => {
                                     let available = !inactiveCollections.has(i);
@@ -396,6 +397,7 @@ function App() {
                                     )
                                 })
                             }
+                            </div>
                         </Form.Group>
                     }
                     <Form.Group>
@@ -529,7 +531,9 @@ function App() {
                     <hr/>
                 </div>
                 <div style={{
-                    overflowY: "auto"
+                    overflowY: "auto",
+                    wordBreak: "break-all",
+                    fontSize: "small"
                 }}>
                     {
                         loadingGenes ? 
@@ -545,12 +549,15 @@ function App() {
                             :
                             <TableVirtuoso
                                 style={{fontSize: "small", height: "calc(100vh - 350px)"}}
+                                components={{
+                                    Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                                }}
                                 fixedHeaderContent={() => {
                                     return (
                                         <tr>
-                                            <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Ensembl</th>
-                                            <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Entrez</th>
-                                            <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Symbol</th>
+                                            <th style={{ backgroundColor: "white"}}>Ensembl</th>
+                                            <th style={{ backgroundColor: "white", width:"70px"}}>Entrez</th>
+                                            <th style={{ backgroundColor: "white", width:"70px"}}>Symbol</th>
                                         </tr>
                                     );
                                 }}
