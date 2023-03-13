@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/gesel-app/static/css/main.c30e0fcd.css",
-    "main.js": "/gesel-app/static/js/main.25f81ee7.js",
+    "main.js": "/gesel-app/static/js/main.c62abeaf.js",
     "static/js/787.d74e7676.chunk.js": "/gesel-app/static/js/787.d74e7676.chunk.js",
     "index.html": "/gesel-app/index.html",
     "main.c30e0fcd.css.map": "/gesel-app/static/css/main.c30e0fcd.css.map",
-    "main.25f81ee7.js.map": "/gesel-app/static/js/main.25f81ee7.js.map",
+    "main.c62abeaf.js.map": "/gesel-app/static/js/main.c62abeaf.js.map",
     "787.d74e7676.chunk.js.map": "/gesel-app/static/js/787.d74e7676.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.c30e0fcd.css",
-    "static/js/main.25f81ee7.js"
+    "static/js/main.c62abeaf.js"
   ]
 }
