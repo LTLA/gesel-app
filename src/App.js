@@ -1,12 +1,8 @@
-import logo from './logo.svg';
 import './App.css';
-import Container from "react-bootstrap/Container"
-import Row from "react-bootstrap/Row"
-import Col from "react-bootstrap/Col"
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
-import { TableVirtuoso } from 'react-virtuoso'
+import { TableVirtuoso } from "react-virtuoso";
 import ClipLoader from "react-spinners/ClipLoader";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from "react"
@@ -61,7 +57,6 @@ gesel.setGeneDownload(async file => {
     let address = proxy + "/" + encodeURIComponent(gene_url + "/" + file);
     let cache = await caches.open(gene_key);
     let existing = await cache.match(address);
-    console.log(existing);
     if (typeof existing == "undefined") {
         existing = await fetch(address); 
         cache.put(address, existing.clone());
@@ -107,6 +102,7 @@ function App() {
     const [ loadingGenes, setLoadingGenes ] = useState(false);
 
     function wipeOnSpeciesChange() {
+        console.log("am i getting called?")
         setChosenGenes(null);
         setCollections(null);
         setInactiveCollections(new Set);
@@ -220,7 +216,6 @@ function App() {
         if (inactiveCollections.size > 0) {
             let replacement = [];
             for (const r of res) {
-                console.log(r);
                 if (!inactiveCollections.has(r.collection)) {
                     replacement.push(r);
                 }
@@ -253,7 +248,17 @@ function App() {
             initial_search = false;
             searchSets(null);
         }
+
+        // console.log(species);
+        // setCollections2(species);
     }, []);
+
+    // define a useeffect when species changes
+    useEffect(() => {
+        if (species) {
+            setCollections2(species);
+        }
+    }, [species])
 
     function focusSet(id, species) {
         setLoadingGenes(true);
@@ -307,286 +312,316 @@ function App() {
     return (
         <div style={{
             display: "grid",
-            gridTemplateColumns: "1fr 0.01fr 2fr 0.01fr 1fr"
+            gridTemplateColumns: "250px auto 350px",
+            gap: "5px",
+            height: "100vh",
+            padding: "3px",
         }}>
-
-        <div style={{
-            display: "grid",
-            borderLeft: "solid grey 0.5px",
-            gridTemplateRows: "1fr 5fr",
-            gridColumn: 5,
-            gridRow: 1
-        }}>
-        <div style={{
-            gridColumn: 1,
-            gridRow: 1
-        }}>
-        <h3>Set details</h3>
-        <strong>Collection:</strong> {selected === null ?  "n/a" : selected.collection}<br/>
-        <strong>Name:</strong> {selected === null ? "n/a" : selected.name}<br/>
-        <strong>Description:</strong> {selected === null ? "n/a" : selected.description}<br/>
-        <strong>Size:</strong> {selected === null ? "n/a" : selected.size}
-        <hr/>
-        </div>
-        <div style={{
-            overflow: "auto",
-            gridColumn: 1,
-            gridRow: 2
-        }}>
-        {(
-            loadingGenes ? 
-                <div style={{textAlign:"center"}}>
-                    <ClipLoader
-                      color="#000000"
-                      loading={true}
-                      size={150}
-                      aria-label="Loading Spinner"
-                      data-testid="loader"
-                    />
-                </div>
-                :
-                <TableVirtuoso
-                    totalCount={members.length}
-                    fixedHeaderContent={(index, user) => {
-                        return (
-                            <tr>
-                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Ensembl</th>
-                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Entrez</th>
-                                <th style={{ backgroundColor: "white", wordWrap: "break-word", width: "200px" }}>Symbol</th>
-                            </tr>
-                        );
-                    }}
-                    itemContent={i => 
-                        {
-                            let x = members[i];
-                            let style = { "backgroundColor":  (hoveringGene !== null && x.id == hoveringGene ? "#add8e6" : "#00000000") };
-                            let combinedStyle = style;
-                            let textStyle = {};
-                            if (chosenGenes !== null && chosenGenes.has(x.id)) {
-                                textStyle = { fontWeight: "bold", color: "red" };
-                                combinedStyle = { ...style, ...textStyle } 
+            <div style={{ 
+                borderRight: "solid gainsboro 0.5px",
+                gridColumn: 1,
+                gridRow: 1,
+                padding: "10px",
+            }}>
+                <Form style={{display:"flex", flexDirection: "column", maxHeight: "calc(100vh - 25px)"}}>
+                    <Form.Group className="mb-3" controlId="genesFilter">
+                        <Form.Label>Filter by genes</Form.Label>
+                        <p className="text-muted">
+                            Enter a list of genes (Ensembl or Entrez IDs or symbols, one per line, text after <code>#</code> is ignored) and we'll find sets with overlaps.
+                            Sets are ranked by the enrichment p-value.
+                        </p>
+                        <Form.Control 
+                            as="textarea"
+                            placeholder="SNAP25&#10;Neurod6&#10;ATOH1&#10;ENSG00000142208"
+                            value={searchGenes}
+                            rows={5}
+                            onChange={e => setSearchGenes(e.target.value)}
+                            style={{whiteSpace: "pre"}}
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3" controlId="speciesFilter">
+                        <Form.Label>Filter by species</Form.Label>
+                        <Form.Select 
+                            aria-label="Species" 
+                            value={species}
+                            onChange={e => {
+                                setSpecies(e.target.value);
+                                wipeOnSpeciesChange();
+                            }}
+                        >
+                            <option value="9606">Human</option>
+                            <option value="10090">Mouse</option>
+                            <option value="7227">Fly</option>
+                            <option value="10116">Rat</option>
+                            <option value="6239">C. elegans</option>
+                            <option value="7955">Zebrafish</option>
+                            <option value="9598">Chimpanzee</option>
+                        </Form.Select>
+                    </Form.Group>
+                    <Form.Group className="mb-3" controlId="collectionFilter">
+                        <Form.Label>Name or description</Form.Label>
+                        <br />
+                        <Form.Text className="text-muted">
+                            <code>*</code> and <code>?</code> wildcards are supported!
+                        </Form.Text>
+                        <Form.Control 
+                            type="text"
+                            placeholder="MAPK"
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                        />
+                    </Form.Group>
+                    {
+                        collections !== null && <Form.Group>
+                            <Form.Label>Available collections</Form.Label><br/>
+                            <div style={{height: "calc(100vh - 590px)", overflowY: "auto", marginBottom: "5px"}}>
+                            {
+                                collections.map((x, i) => {
+                                    let available = !inactiveCollections.has(i);
+                                    return (
+                                        <Form.Check
+                                            key={i}
+                                            style={{fontSize: "small", overflowY:"auto"}}
+                                            label={x.title}
+                                            checked={available}
+                                            onChange={() => {
+                                                let replacement = new Set(inactiveCollections);
+                                                if (inactiveCollections.has(i)) {
+                                                    replacement.delete(i);
+                                                } else {
+                                                    replacement.add(i);
+                                                }
+                                                setInactiveCollections(replacement);
+                                            }}
+                                        />
+                                    )
+                                })
                             }
-
-                            let all_entrez = [];
-                            for (var i = 0; i < x.entrez.length; i++) {
-                                if (i > 0) {
-                                    all_entrez.push(", ");
-                                }
-                                all_entrez.push(<a target="_blank" style={textStyle} href={"https://www.ncbi.nlm.nih.gov/gene/" + x.entrez[i]}>{x.entrez[i]}</a>)
-                            }
-
-                            let all_ensembl = [];
-                            let ens_species = taxonomy2ensembl[species];
-                            for (var i = 0; i < x.ensembl.length; i++) {
-                                if (i > 0) {
-                                    all_ensembl.push(", ");
-                                }
-                                all_ensembl.push(<a target="_blank" style={textStyle} href={"https://ensembl.org/" + ens_species + "/Gene/Summary?g=" + x.ensembl[i]}>{x.ensembl[i]}</a>);
-                            }
-
-                            return (
-                                <>
-                                    <td 
-                                        onMouseEnter={() => setHoveringGene(x.id)} 
-                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
-                                        style={style}
-                                    >
-                                        {all_ensembl}
-                                    </td>
-                                    <td 
-                                        onMouseEnter={() => setHoveringGene(x.id)} 
-                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
-                                        style={style}
-                                    >
-                                        {all_entrez}
-                                    </td>
-                                    <td 
-                                        onMouseEnter={() => setHoveringGene(x.id)} 
-                                        onMouseLeave={() => unsetHoveringGene(x.id)} 
-                                        style={combinedStyle}
-                                    >
-                                        {x.symbol.join(", ")}
-                                    </td>
-                                </>
-                            );
-                        }
+                            </div>
+                        </Form.Group>
                     }
-                />
-        )}
-        </div>
-        </div>
+                    <Form.Group>
+                        <Button variant="primary" type="search" onClick={searchSets}>
+                            Search 
+                        </Button>
+                    </Form.Group>
+                </Form>
+            </div>
 
-        <div style={{ 
-            overflow: "auto",
-            borderRight: "solid grey 0.5px",
-            gridColumn: 1,
-            gridRow: 1,
-            padding: "5px"
-        }}>
-        <Form>
-            <Form.Group className="mb-3" controlId="genesFilter">
-                <Form.Label>Filter by genes</Form.Label>
-                <Form.Control 
-                    as="textarea"
-                    placeholder="SNAP25&#10;Neurod6&#10;ATOH1&#10;ENSG00000142208"
-                    value={searchGenes}
-                    rows={10}
-                    onChange={e => setSearchGenes(e.target.value)}
-                    style={{whiteSpace: "pre"}}
-                />
-                <Form.Text className="text-muted">
-                Enter a list of genes (Ensembl or Entrez IDs or symbols, one per line, text after <code>#</code> is ignored) and we'll find sets with overlaps.
-                Sets are ranked by the enrichment p-value.
-                </Form.Text>
-            </Form.Group>
-            <Form.Group className="mb-3" controlId="speciesFilter">
-                <Form.Label>Filter by species</Form.Label>
-                <Form.Select 
-                    aria-label="Species" 
-                    value={species}
-                    onChange={e => {
-                        setSpecies(e.target.value);
-                        setCollections2(e.target.value); // default value.
-                        wipeOnSpeciesChange();
-                    }}
-                >
-                    <option value="9606">Human</option>
-                    <option value="10090">Mouse</option>
-                    <option value="7227">Fly</option>
-                    <option value="10116">Rat</option>
-                    <option value="6239">C. elegans</option>
-                    <option value="7955">Zebrafish</option>
-                    <option value="9598">Chimpanzee</option>
-                </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3" controlId="collectionFilter">
-                <Form.Label>Name or description</Form.Label>
-                <Form.Control 
-                    type="text"
-                    placeholder="MAPK"
-                    value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
-                />
-                <Form.Text className="text-muted">
-                <code>*</code> and <code>?</code> wildcards are supported!
-                </Form.Text>
-            </Form.Group>
-            <Form.Group>
-                <Form.Label>Available collections</Form.Label><br/>
-                {(
-                    collections == null ?
-                        ""
+            <div style={{ 
+                gridColumn: 2,
+                gridRow: 1,
+                wordBreak: "break-all",
+                fontSize: "small"
+            }}>
+                {
+                    loadingSets ? 
+                        <div style={{textAlign:"center"}}>
+                            <ClipLoader
+                            color="#000000"
+                            loading={true}
+                            size={150}
+                            aria-label="Loading Spinner"
+                            data-testid="loader"
+                            />
+                        </div>
                         :
-                        collections.map((x, i) => {
-                            let available = !inactiveCollections.has(i);
-                            return (
-                                <Form.Check
-                                    label={x.title}
-                                    checked={available}
-                                    onChange={() => {
-                                        let replacement = new Set(inactiveCollections);
-                                        if (inactiveCollections.has(i)) {
-                                            replacement.delete(i);
-                                        } else {
-                                            replacement.add(i);
-                                        }
-                                        setInactiveCollections(replacement);
-                                    }}
-                                />
-                            )
-                        })
-                )}
-            </Form.Group>
-            <Form.Group>
-                <Form.Label></Form.Label><br/>
-                <Button variant="primary" type="search" onClick={searchSets}>
-                   Search 
-                </Button>
-            </Form.Group>
-        </Form>
-    </div>
+                        <TableVirtuoso
+                            totalCount={results.length}
+                            fixedHeaderContent={(index, user) => (
+                                <tr>
+                                    <th style={{ background: "white", width: "20%" }}>Name</th>
+                                    <th style={{ background: "white", width: "50%" }}>Description</th>
+                                    <th style={{ background: "white", width: "10%" }}>Size</th>
+                                    <th style={{ background: "white", width: "10%" }}>Overlap</th>
+                                    <th style={{ background: "white", width: "10%" }}>P-value</th>
+                                </tr>
+                            )}
+                            components={{
+                                Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                            }}
+                            itemContent={i => 
+                                {
+                                    const x = results[i];
+                                    return (
+                                        <>
+                                            
+                                            <td 
+                                                onMouseEnter={() => setHovering(x.id)} 
+                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                onClick={() => focusSet(x.id, species)} 
+                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                            >
+                                                {x.name}
+                                            </td>
+                                            <td 
+                                                onMouseEnter={() => setHovering(x.id)} 
+                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                onClick={() => focusSet(x.id, species)} 
+                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                            >
+                                                {x.description}
+                                            </td>
+                                            <td 
+                                                onMouseEnter={() => setHovering(x.id)} 
+                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                onClick={() => focusSet(x.id, species)} 
+                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                            >
+                                                {x.size}
+                                            </td>
+                                            <td
+                                                onMouseEnter={() => setHovering(x.id)} 
+                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                onClick={() => focusSet(x.id, species)} 
+                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                            >
+                                                {"count" in x ? x.count : "n/a"}
+                                            </td>
+                                            <td 
+                                                onMouseEnter={() => setHovering(x.id)} 
+                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                onClick={() => focusSet(x.id, species)} 
+                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                            >
+                                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                                            </td>
+                                        </>
+                                    );
+                                }
+                            }
+                        />
+                }
+            </div>
 
-    <div style={{ 
-        gridColumn: 3,
-        gridRow: 1
-    }}>
-        {(
-            loadingSets ? 
-                <div style={{textAlign:"center"}}>
-                    <ClipLoader
-                      color="#000000"
-                      loading={true}
-                      size={150}
-                      aria-label="Loading Spinner"
-                      data-testid="loader"
-                    />
-                </div>
-                :
-                <TableVirtuoso
-                    totalCount={results.length}
-                    fixedHeaderContent={(index, user) => (
+            <div style={{
+                display: "flex",
+                borderLeft: "solid gainsboro 0.5px",
+                flexDirection: "column",
+                padding: "10px"
+            }}>
+                <div style={{
+                    wordBreak: "break-all",
+                    fontSize: "small"
+                }}>
+                    <h4>Set details</h4>
+                    <hr />
+                    <table>
+                        <colgroup>
+                            <col style={{width: "90px"}} />
+                            <col style={{width: "calc(100% - 90px)"}} />
+                        </colgroup>
                         <tr>
-                            <th style={{ background: "white", width: "20%" }}>Name</th>
-                            <th style={{ background: "white", width: "50%" }}>Description</th>
-                            <th style={{ background: "white", width: "10%" }}>Size</th>
-                            <th style={{ background: "white", width: "10%" }}>Overlap</th>
-                            <th style={{ background: "white", width: "10%" }}>P-value</th>
+                            <td><strong>Collection:</strong></td>
+                            <td>{selected === null ?  "n/a" : selected.collection}</td>
                         </tr>
-                    )}
-                    itemContent={i => 
-                        {
-                            const x = results[i];
-                            return (
-                                <>
-                                    
-                                    <td 
-                                        onMouseEnter={() => setHovering(x.id)} 
-                                        onMouseLeave={() => unsetHovering(x.id)} 
-                                        onClick={() => focusSet(x.id, species)} 
-                                        style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                    >
-                                        {x.name}
-                                    </td>
-                                    <td 
-                                        onMouseEnter={() => setHovering(x.id)} 
-                                        onMouseLeave={() => unsetHovering(x.id)} 
-                                        onClick={() => focusSet(x.id, species)} 
-                                        style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                    >
-                                        {x.description}
-                                    </td>
-                                    <td 
-                                        onMouseEnter={() => setHovering(x.id)} 
-                                        onMouseLeave={() => unsetHovering(x.id)} 
-                                        onClick={() => focusSet(x.id, species)} 
-                                        style={{"backgroundColor": defineBackground(x.id)}}
-                                    >
-                                        {x.size}
-                                    </td>
-                                    <td
-                                        onMouseEnter={() => setHovering(x.id)} 
-                                        onMouseLeave={() => unsetHovering(x.id)} 
-                                        onClick={() => focusSet(x.id, species)} 
-                                        style={{"backgroundColor": defineBackground(x.id)}}
-                                    >
-                                        {"count" in x ? x.count : "n/a"}
-                                    </td>
-                                    <td 
-                                        onMouseEnter={() => setHovering(x.id)} 
-                                        onMouseLeave={() => unsetHovering(x.id)} 
-                                        onClick={() => focusSet(x.id, species)} 
-                                        style={{"backgroundColor": defineBackground(x.id)}}
-                                    >
-                                        {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
-                                    </td>
-                                </>
-                            );
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td>{selected === null ? "n/a" : selected.name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Description:</strong></td>
+                            <td>{selected === null ? "n/a" : selected.description}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Size:</strong></td>
+                            <td>{selected === null ? "n/a" : selected.size}</td>
+                        </tr>
+                    </table>
+                    <hr/>
+                </div>
+                <div style={{
+                    overflowY: "auto",
+                    wordBreak: "break-all",
+                    fontSize: "small"
+                }}>
+                    {
+                        loadingGenes ? 
+                            <div style={{textAlign:"center"}}>
+                                <ClipLoader
+                                color="#000000"
+                                loading={true}
+                                size={150}
+                                aria-label="Loading Spinner"
+                                data-testid="loader"
+                                />
+                            </div>
+                            :
+                            <TableVirtuoso
+                                style={{fontSize: "small", height: "calc(100vh - 350px)"}}
+                                components={{
+                                    Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                                }}
+                                fixedHeaderContent={() => {
+                                    return (
+                                        <tr>
+                                            <th style={{ backgroundColor: "white"}}>Ensembl</th>
+                                            <th style={{ backgroundColor: "white", width:"70px"}}>Entrez</th>
+                                            <th style={{ backgroundColor: "white", width:"70px"}}>Symbol</th>
+                                        </tr>
+                                    );
+                                }}
+                                totalCount={members.length}
+                                itemContent={ (i) => 
+                                    {
+                                        let x = members[i];
+                                        let style = { "backgroundColor":  (hoveringGene !== null && x.id == hoveringGene ? "#add8e6" : "#00000000") };
+                                        let combinedStyle = style;
+                                        let textStyle = {};
+                                        if (chosenGenes !== null && chosenGenes.has(x.id)) {
+                                            textStyle = { fontWeight: "bold", color: "red" };
+                                            combinedStyle = { ...style, ...textStyle } 
+                                        }
+
+                                        let all_entrez = [];
+                                        for (var i = 0; i < x.entrez.length; i++) {
+                                            if (i > 0) {
+                                                all_entrez.push(", ");
+                                            }
+                                            all_entrez.push(<a target="_blank" style={textStyle} href={"https://www.ncbi.nlm.nih.gov/gene/" + x.entrez[i]}>{x.entrez[i]}</a>)
+                                        }
+
+                                        let all_ensembl = [];
+                                        let ens_species = taxonomy2ensembl[species];
+                                        for (var i = 0; i < x.ensembl.length; i++) {
+                                            if (i > 0) {
+                                                all_ensembl.push(", ");
+                                            }
+                                            all_ensembl.push(<a target="_blank" style={textStyle} href={"https://ensembl.org/" + ens_species + "/Gene/Summary?g=" + x.ensembl[i]}>{x.ensembl[i]}</a>);
+                                        }
+
+                                        return (
+                                            <>
+                                                <td 
+                                                    onMouseEnter={() => setHoveringGene(x.id)} 
+                                                    onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                                    style={style}
+                                                >
+                                                    {all_ensembl}
+                                                </td>
+                                                <td 
+                                                    onMouseEnter={() => setHoveringGene(x.id)} 
+                                                    onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                                    style={style}
+                                                >
+                                                    {all_entrez}
+                                                </td>
+                                                <td 
+                                                    onMouseEnter={() => setHoveringGene(x.id)} 
+                                                    onMouseLeave={() => unsetHoveringGene(x.id)} 
+                                                    style={combinedStyle}
+                                                >
+                                                    {x.symbol.join(", ")}
+                                                </td>
+                                            </>
+                                        );
+                                    }
+                                }
+                            />
                         }
-                    }
-                />
-        )}
-    </div>
-    </div>
+                    </div>
+            </div>
+        </div>
     );
 }
 
