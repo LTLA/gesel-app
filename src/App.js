@@ -452,7 +452,7 @@ function App() {
                                                 onClick={() => focusSet(x.id, species)} 
                                                 style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                                             >
-                                                {x.name}
+                                                {x.name.match("^GO:[0-9]+$") ? <a href={"http://amigo.geneontology.org/amigo/term/" + x.name} target="_blank">{x.name}</a> : x.name}
                                             </td>
                                             <td 
                                                 onMouseEnter={() => setHovering(x.id)} 
@@ -460,7 +460,7 @@ function App() {
                                                 onClick={() => focusSet(x.id, species)} 
                                                 style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                                             >
-                                                {x.description}
+                                                {x.description.match("^http[^ ]+$") ? <a href={x.description} target="_blank">link to description</a> : x.description}
                                             </td>
                                             <td 
                                                 onMouseEnter={() => setHovering(x.id)} 
