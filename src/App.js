@@ -49,7 +49,7 @@ gesel.setReferenceDownload(async (file, start, end) => {
         let existing = await cache.match(address);
         if (typeof existing == "undefined") {
             existing = await fetch(address); 
-            cache.put(ref_key, existing.clone());
+            cache.put(address, existing.clone());
         }
         return existing;
     } else {
@@ -64,7 +64,7 @@ gesel.setGeneDownload(async file => {
     console.log(existing);
     if (typeof existing == "undefined") {
         existing = await fetch(address); 
-        cache.put(gene_key, existing.clone());
+        cache.put(address, existing.clone());
     }
     return existing;
 });
