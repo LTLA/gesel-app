@@ -2,11 +2,14 @@ import './App.css';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import ToggleButton from 'react-bootstrap/ToggleButton';
 import { TableVirtuoso } from "react-virtuoso";
 import ClipLoader from "react-spinners/ClipLoader";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from "react"
 import * as gesel from "gesel";
+import UDimPlot from './uDimPlot';
 
 // Seeing if we need to do anything.
 const params = new URLSearchParams(window.location.search);
@@ -100,6 +103,9 @@ function App() {
     const [ loadingSets, setLoadingSets ] = useState(false);
 
     const [ loadingGenes, setLoadingGenes ] = useState(false);
+
+    const [showDimPlot, setShowDimPlot] = useState(true);
+
 
     function wipeOnSpeciesChange() {
         console.log("am i getting called?")
@@ -414,84 +420,146 @@ function App() {
                 wordBreak: "break-all",
                 fontSize: "small"
             }}>
-                {
-                    loadingSets ? 
-                        <div style={{textAlign:"center"}}>
-                            <ClipLoader
-                            color="#000000"
-                            loading={true}
-                            size={150}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
-                            />
-                        </div>
-                        :
-                        <TableVirtuoso
-                            totalCount={results.length}
-                            fixedHeaderContent={(index, user) => (
-                                <tr>
-                                    <th style={{ background: "white", width: "20%" }}>Name</th>
-                                    <th style={{ background: "white", width: "50%" }}>Description</th>
-                                    <th style={{ background: "white", width: "10%" }}>Size</th>
-                                    <th style={{ background: "white", width: "10%" }}>Overlap</th>
-                                    <th style={{ background: "white", width: "10%" }}>P-value</th>
-                                </tr>
-                            )}
-                            components={{
-                                Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                <>
+                    <ButtonGroup className="mb-2">
+                        <ToggleButton
+                            type="radio"
+                            name="radio"
+                            value="Embeddings"
+                            checked={showDimPlot == true}
+                            onClick={(e) => setShowDimPlot(true)}
+                        > Embeddings
+                        </ToggleButton>
+                        <ToggleButton
+                            type="radio"
+                            name="radio"
+                            value="Table"
+                            checked={showDimPlot == false}
+                            onClick={(e) => setShowDimPlot(false)}
+                        > Table
+                        </ToggleButton>
+                    </ButtonGroup>
+                    { showDimPlot == true ?
+                        <>
+                            <UDimPlot 
+                            data={{
+                                    x: [
+                                        3.615,
+                                        -2.06333,
+                                        -2.84047,
+                                        1.91832,
+                                        -3.46401,
+                                        -5.35239,
+                                        2.32431,
+                                        7.01144,
+                                        4.81022,
+                                        -0.98695],
+                                    y: [ -2.76257,
+                                        3.22055,
+                                        -1.63778,
+                                        -6.54872,
+                                        3.98878,
+                                        -0.17806,
+                                        -4.27922,
+                                        1.40373,
+                                        -2.56429,
+                                        2.40132]
                             }}
-                            itemContent={i => 
-                                {
-                                    const x = results[i];
-                                    return (
-                                        <>
-                                            
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.name.match("^GO:[0-9]+$") ? <a href={"http://amigo.geneontology.org/amigo/term/" + x.name} target="_blank">{x.name}</a> : x.name}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.description.match("^http[^ ]+$") ? <a href={x.description} target="_blank">link to description</a> : x.description}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.size}
-                                            </td>
-                                            <td
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {"count" in x ? x.count : "n/a"}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
-                                            </td>
-                                        </>
-                                    );
-                                }
+                            colors={[
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514,
+                                7225514]}/>
+                        </>
+                        : 
+                        <>
+                            {
+                                loadingSets ? 
+                                    <div style={{textAlign:"center"}}>
+                                        <ClipLoader
+                                        color="#000000"
+                                        loading={true}
+                                        size={150}
+                                        aria-label="Loading Spinner"
+                                        data-testid="loader"
+                                        />
+                                    </div>
+                                    :
+                                    <TableVirtuoso
+                                        totalCount={results.length}
+                                        fixedHeaderContent={(index, user) => (
+                                            <tr>
+                                                <th style={{ background: "white", width: "20%" }}>Name</th>
+                                                <th style={{ background: "white", width: "50%" }}>Description</th>
+                                                <th style={{ background: "white", width: "10%" }}>Size</th>
+                                                <th style={{ background: "white", width: "10%" }}>Overlap</th>
+                                                <th style={{ background: "white", width: "10%" }}>P-value</th>
+                                            </tr>
+                                        )}
+                                        components={{
+                                            Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                                        }}
+                                        itemContent={i => 
+                                            {
+                                                const x = results[i];
+                                                return (
+                                                    <>
+                                                        
+                                                        <td 
+                                                            onMouseEnter={() => setHovering(x.id)} 
+                                                            onMouseLeave={() => unsetHovering(x.id)} 
+                                                            onClick={() => focusSet(x.id, species)} 
+                                                            style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                        >
+                                                            {x.name.match("^GO:[0-9]+$") ? <a href={"http://amigo.geneontology.org/amigo/term/" + x.name} target="_blank">{x.name}</a> : x.name}
+                                                        </td>
+                                                        <td 
+                                                            onMouseEnter={() => setHovering(x.id)} 
+                                                            onMouseLeave={() => unsetHovering(x.id)} 
+                                                            onClick={() => focusSet(x.id, species)} 
+                                                            style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                        >
+                                                            {x.description.match("^http[^ ]+$") ? <a href={x.description} target="_blank">link to description</a> : x.description}
+                                                        </td>
+                                                        <td 
+                                                            onMouseEnter={() => setHovering(x.id)} 
+                                                            onMouseLeave={() => unsetHovering(x.id)} 
+                                                            onClick={() => focusSet(x.id, species)} 
+                                                            style={{"backgroundColor": defineBackground(x.id)}}
+                                                        >
+                                                            {x.size}
+                                                        </td>
+                                                        <td
+                                                            onMouseEnter={() => setHovering(x.id)} 
+                                                            onMouseLeave={() => unsetHovering(x.id)} 
+                                                            onClick={() => focusSet(x.id, species)} 
+                                                            style={{"backgroundColor": defineBackground(x.id)}}
+                                                        >
+                                                            {"count" in x ? x.count : "n/a"}
+                                                        </td>
+                                                        <td 
+                                                            onMouseEnter={() => setHovering(x.id)} 
+                                                            onMouseLeave={() => unsetHovering(x.id)} 
+                                                            onClick={() => focusSet(x.id, species)} 
+                                                            style={{"backgroundColor": defineBackground(x.id)}}
+                                                        >
+                                                            {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                                                        </td>
+                                                    </>
+                                                );
+                                            }
+                                        }
+                                    />
                             }
-                        />
-                }
+                        </>
+                    }
+                </>
             </div>
 
             <div style={{

@@ -42,3 +42,9 @@
 .text-muted {
   font-size: small !important;
 }
+
+.udimplot-container, .dim-plot {
+  margin: 5px;
+  max-height: 100%;
+  height: 100%;
+}
