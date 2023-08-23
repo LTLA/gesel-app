@@ -27,7 +27,7 @@ const UDimPlot = (props) => {
         // };
 
         tmp_scatterplot.clickCallback = function(point_idx) {
-            console.log(`index: ${point_idx} is clicked.`);
+            console.log(point_idx)
         }
 
         tmp_scatterplot.hoverCallback = function (point_idx) {
