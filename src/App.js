@@ -106,13 +106,16 @@ function App() {
 
     const [showDimPlot, setShowDimPlot] = useState(true);
 
+    const [ tsne, setTsne ] = useState(null);
+
 
     function wipeOnSpeciesChange() {
-        console.log("am i getting called?")
+        // console.log("am i getting called?")
+        setResults([]);
+        setTsne(null);
         setChosenGenes(null);
         setCollections(null);
         setInactiveCollections(new Set);
-        setResults([]);
         setMembers([]);
         setSelected(null);
         setHovering(null);
@@ -120,9 +123,18 @@ function App() {
 
     function setCollections2(species) {
         gesel.fetchAllCollections(species).then(res => { 
-            console.log(res);
+            // console.log(res);
             setCollections(res);
         });
+    }
+
+    async function getEmbeddings(species) {
+        let embeds = await gesel.fetchEmbeddingsForSpecies(species);
+        console.log(embeds);
+
+        if (embeds && "x" in embeds && "y" in embeds) {
+            setTsne(embeds)
+        }
     }
 
     async function searchSets(e) {
@@ -253,6 +265,8 @@ function App() {
         if (initial_search) {
             initial_search = false;
             searchSets(null);
+
+            getEmbeddings(species);
         }
 
         // console.log(species);
@@ -263,6 +277,7 @@ function App() {
     useEffect(() => {
         if (species) {
             setCollections2(species);
+            getEmbeddings(species)
         }
     }, [species])
 
@@ -441,41 +456,9 @@ function App() {
                     </ButtonGroup>
                     { showDimPlot == true ?
                         <>
-                            <UDimPlot 
-                            data={{
-                                    x: [
-                                        3.615,
-                                        -2.06333,
-                                        -2.84047,
-                                        1.91832,
-                                        -3.46401,
-                                        -5.35239,
-                                        2.32431,
-                                        7.01144,
-                                        4.81022,
-                                        -0.98695],
-                                    y: [ -2.76257,
-                                        3.22055,
-                                        -1.63778,
-                                        -6.54872,
-                                        3.98878,
-                                        -0.17806,
-                                        -4.27922,
-                                        1.40373,
-                                        -2.56429,
-                                        2.40132]
-                            }}
-                            colors={[
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514,
-                                7225514]}/>
+                        {tsne && 
+                        <UDimPlot 
+                        data={tsne} meta={results}/>}
                         </>
                         : 
                         <>

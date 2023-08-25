@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import ScatterGL from "epiviz.scatter.gl";
+import Rainbow from "./rainbow";
 
 const UDimPlot = (props) => {
   const container = useRef();
   let data = props?.data; // must contain x and y coordinates
-  let colors = props?.colors; // color vector, must match the number of cells
+  let meta = props?.meta; // if they performed a search
   const [scatterplot, setScatterplot] = useState(null);
 
   useEffect(() => {
@@ -47,20 +48,51 @@ const UDimPlot = (props) => {
       });
 
       let color = [];
+      let size = 2;
+
+      if (meta && Array.isArray(meta) && meta.length > 0) {
+        let map_meta = {}
+        meta.forEach(x => map_meta[x.id] = x);
+
+        let counts_vector = meta.map(x => x.count);
+        let tmpgradient = new Rainbow();
+        tmpgradient.setSpectrum("#F5F8FA", "#2965CC");
+        tmpgradient.setNumberRange(0, Math.max(...counts_vector));
+
+        size = []
+        color = []
+
+        for (let i = 0; i < data.x.length; i++) {
+          if (i in map_meta) {
+            color.push("#" + tmpgradient.colorAt(map_meta[i].count));
+            size.push(3);
+          } else {
+            color.push("#" + tmpgradient.colorAt(0));
+            size.push(1);
+          }
+        }
+      }
 
       // fall back
       if (color.length == 0) {
         color = props?.colors;
       }
 
-      if (color.length != data.x.length) {
-        console.error("length of colors does not match the number of dots.");
+      if (color && Array.isArray(color)) {
+        if (color.length != data.x.length) {
+          console.error("length of colors does not match the number of dots.");
+        } else {
+          tmp_scatterplot.setState({
+            color: color,
+            size: 2,
+          });
+        }
       } else {
         tmp_scatterplot.setState({
-          color: color,
-          size: 5,
+          size: 2,
         });
       }
+
       tmp_scatterplot.render();
     }
   }, [props]);
