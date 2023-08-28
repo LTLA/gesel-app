@@ -129,11 +129,13 @@ function App() {
     }
 
     async function getEmbeddings(species) {
+        setLoadingSets(true);
         let embeds = await gesel.fetchEmbeddingsForSpecies(species);
-        console.log(embeds);
+
 
         if (embeds && "x" in embeds && "y" in embeds) {
-            setTsne(embeds)
+            setTsne(embeds);
+            setLoadingSets(false);
         }
     }
 
@@ -456,10 +458,21 @@ function App() {
                     </ButtonGroup>
                     { showDimPlot == true ?
                         <>
-                        {tsne && 
-                        <UDimPlot 
-                        data={tsne} meta={results}/>}
-                        </>
+                        {
+                            loadingSets ? 
+                                <div style={{textAlign:"center"}}>
+                                    <ClipLoader
+                                    color="#000000"
+                                    loading={true}
+                                    size={150}
+                                    aria-label="Loading Spinner"
+                                    data-testid="loader"
+                                    />
+                                </div>
+                                :
+                                <UDimPlot 
+                                    data={tsne} meta={results}/>}
+                                </>
                         : 
                         <>
                             {
