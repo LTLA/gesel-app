@@ -1,15 +1,19 @@
 {
   "files": {
-    "main.css": "/gesel-app/static/css/main.c30e0fcd.css",
-    "main.js": "/gesel-app/static/js/main.c62abeaf.js",
+    "main.css": "/gesel-app/static/css/main.ff061a91.css",
+    "main.js": "/gesel-app/static/js/main.ec285bfd.js",
+    "static/js/652.203717ca.chunk.js": "/gesel-app/static/js/652.203717ca.chunk.js",
+    "static/js/783.c3ab7a41.chunk.js": "/gesel-app/static/js/783.c3ab7a41.chunk.js",
     "static/js/787.d74e7676.chunk.js": "/gesel-app/static/js/787.d74e7676.chunk.js",
     "index.html": "/gesel-app/index.html",
-    "main.c30e0fcd.css.map": "/gesel-app/static/css/main.c30e0fcd.css.map",
-    "main.c62abeaf.js.map": "/gesel-app/static/js/main.c62abeaf.js.map",
+    "main.ff061a91.css.map": "/gesel-app/static/css/main.ff061a91.css.map",
+    "main.ec285bfd.js.map": "/gesel-app/static/js/main.ec285bfd.js.map",
+    "652.203717ca.chunk.js.map": "/gesel-app/static/js/652.203717ca.chunk.js.map",
+    "783.c3ab7a41.chunk.js.map": "/gesel-app/static/js/783.c3ab7a41.chunk.js.map",
     "787.d74e7676.chunk.js.map": "/gesel-app/static/js/787.d74e7676.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c30e0fcd.css",
-    "static/js/main.c62abeaf.js"
+    "static/css/main.ff061a91.css",
+    "static/js/main.ec285bfd.js"
   ]
 }
