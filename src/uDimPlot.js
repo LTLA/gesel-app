@@ -24,6 +24,24 @@ const UDimPlot = (props) => {
         setScatterplot(tmp_scatterplot);
 
         tmp_scatterplot.setInteraction("pan");
+
+        tmp_scatterplot.hoverCallback = function (point_idx) {
+          if (point_idx) {
+            //   use some threshold (1.5)
+            if (point_idx.distance <= 0.02) {
+  
+              if (map_meta) {
+                props?.setHoverID(point_idx.indices[0]);
+              }
+            } else {
+                props?.setHoverID(null);
+            }
+          } 
+        };
+  
+        tmp_scatterplot.clickCallback = function(point_idx) {
+          props?.setClickID(point_idx.indices[0]);
+        }
       }
 
       tmp_scatterplot.setInput({
@@ -48,11 +66,20 @@ const UDimPlot = (props) => {
         color = [];
 
         for (let i = 0; i < data.x.length; i++) {
+
           if (i in map_meta) {
-            color.push("#" + tmpgradient.colorAt(map_meta[i].count*100/map_meta[i].size));
+            if (props?.clickID == i) {
+              color.push("#FF0000");
+            } else {
+              color.push("#" + tmpgradient.colorAt(map_meta[i].count*100/map_meta[i].size));
+            }
             size.push(5);
           } else {
-            color.push("#" + tmpgradient.colorAt(0));
+            if (props?.clickID == i) {
+              color.push("#FF0000");
+            } else {
+              color.push("#" + tmpgradient.colorAt(0));
+            }
             size.push(1);
           }
         }
@@ -79,27 +106,8 @@ const UDimPlot = (props) => {
       }
 
       tmp_scatterplot.render();
-
-
-      tmp_scatterplot.hoverCallback = function (point_idx) {
-        if (point_idx) {
-          //   use some threshold (1.5)
-          if (point_idx.distance <= 0.02) {
-
-            if (map_meta) {
-              props?.setHoverID(point_idx.indices[0]);
-            }
-          } else {
-              props?.setHoverID(null);
-          }
-        } 
-      };
-
-      tmp_scatterplot.clickCallback = function(point_idx) {
-        props?.setClickID(point_idx.indices[0]);
-      }
     }
-  }, [props?.data, props?.meta]);
+  }, [props?.data, props?.meta, props?.clickID]);
 
   useEffect(() => {
     return () => {

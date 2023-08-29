@@ -314,6 +314,7 @@ function App() {
     }, [clickID]);
 
     function focusSet(id, species) {
+        setClickID(id);
         setLoadingGenes(true);
         gesel.fetchSingleSet(species, id).then(async res => { 
             let current_collection = await gesel.fetchSingleCollection(species, res.collection);
@@ -534,7 +535,10 @@ function App() {
                                 </div>
                                 :
                                 <UDimPlot 
-                                    data={tsne} meta={results} setHoverID={setHoverID} setClickID={setClickID}/>}
+                                    data={tsne} meta={results} 
+                                    setHoverID={setHoverID} 
+                                    setClickID={setClickID}
+                                    clickID={clickID}/>}
                                 </>
                         : 
                         <>
