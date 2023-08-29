@@ -24,10 +24,6 @@ const UDimPlot = (props) => {
         setScatterplot(tmp_scatterplot);
 
         tmp_scatterplot.setInteraction("pan");
-        // tmp_scatterplot.selectionCallback = function (points) {
-        //   points?.selection?.indices.length > 0 &&
-        //     props?.setSelectedPoints(points?.selection?.indices);
-        // };
       }
 
       tmp_scatterplot.setInput({

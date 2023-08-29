@@ -477,7 +477,7 @@ function App() {
             }}>
                 <>
                 <div className='plot-header'>
-                    <ButtonGroup className="mb-2">
+                    <ButtonGroup className="mb-2 plot-toggle">
                             <ToggleButton
                                 type="radio"
                                 name="radio"
@@ -495,7 +495,7 @@ function App() {
                             > Table
                             </ToggleButton>
                         </ButtonGroup>
-                        <div>
+                        <div className='plot-body'>
                             {
                                 hoverID !== null && <p><span>{formatName(allSets[hoverID]?.name)}</span>: {formatDescription(allSets[hoverID]?.description)}</p>
                             }
