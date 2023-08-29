@@ -1,5 +1,6 @@
 import './App.css';
 import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
@@ -89,6 +90,8 @@ function App() {
     const [ collections, setCollections ] = useState(null);
 
     const [ inactiveCollections, setInactiveCollections ] = useState(createIgnoreList());
+
+    const [ initialized, setInitialized ] = useState(false);
 
     const [ results, setResults ] = useState([]);
 
@@ -274,6 +277,7 @@ function App() {
         }
         window.history.pushState("search results", "", "?" + query_params.join("&"));
 
+        setInitialized(true);
         setLoadingSets(false);
         return true;
     }
@@ -508,7 +512,11 @@ function App() {
                             {showDimPlot ? 
                                 <strong>Double click a point for details!</strong>
                                 :
-                                <strong>Click a row for details!</strong>
+                                (results.length > 0 ?
+                                    <strong>Click a row for details!</strong>
+                                    :
+                                    ""
+                                )
                             }
                             {
                                 hoverID !== null && 
@@ -555,72 +563,97 @@ function App() {
                                         />
                                     </div>
                                     :
-                                    <TableVirtuoso 
-                                        className="middle-panel"
-                                        totalCount={results.length}
-                                        fixedHeaderContent={(index, user) => (
-                                            <tr>
-                                                <th style={{ background: "white", width: "20%" }}>Name</th>
-                                                <th style={{ background: "white", width: "50%" }}>Description</th>
-                                                <th style={{ background: "white", width: "10%" }}>Size</th>
-                                                <th style={{ background: "white", width: "10%" }}>Overlap</th>
-                                                <th style={{ background: "white", width: "10%" }}>P-value</th>
-                                            </tr>
-                                        )}
-                                        components={{
-                                            Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
-                                        }}
-                                        itemContent={i => 
-                                            {
-                                                const x = results[i];
-                                                return (
-                                                    <>
-                                                        
-                                                        <td 
-                                                            onMouseEnter={() => setHovering(x.id)} 
-                                                            onMouseLeave={() => unsetHovering(x.id)} 
-                                                            onClick={() => focusSet(x.id, species)} 
-                                                            style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                                        >
-                                                            {formatName(x.name)}
-                                                        </td>
-                                                        <td 
-                                                            onMouseEnter={() => setHovering(x.id)} 
-                                                            onMouseLeave={() => unsetHovering(x.id)} 
-                                                            onClick={() => focusSet(x.id, species)} 
-                                                            style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                                        >
-                                                            {formatDescription(x.description)}
-                                                        </td>
-                                                        <td 
-                                                            onMouseEnter={() => setHovering(x.id)} 
-                                                            onMouseLeave={() => unsetHovering(x.id)} 
-                                                            onClick={() => focusSet(x.id, species)} 
-                                                            style={{"backgroundColor": defineBackground(x.id)}}
-                                                        >
-                                                            {x.size}
-                                                        </td>
-                                                        <td
-                                                            onMouseEnter={() => setHovering(x.id)} 
-                                                            onMouseLeave={() => unsetHovering(x.id)} 
-                                                            onClick={() => focusSet(x.id, species)} 
-                                                            style={{"backgroundColor": defineBackground(x.id)}}
-                                                        >
-                                                            {"count" in x ? x.count : "n/a"}
-                                                        </td>
-                                                        <td 
-                                                            onMouseEnter={() => setHovering(x.id)} 
-                                                            onMouseLeave={() => unsetHovering(x.id)} 
-                                                            onClick={() => focusSet(x.id, species)} 
-                                                            style={{"backgroundColor": defineBackground(x.id)}}
-                                                        >
-                                                            {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
-                                                        </td>
-                                                    </>
-                                                );
+                                    <>
+                                        <TableVirtuoso 
+                                            className={results.length > 0 ? "middle-panel" : "empty-panel"}
+                                            totalCount={results.length}
+                                            fixedHeaderContent={(index, user) => (
+                                                <tr>
+                                                    <th style={{ background: "white", width: "20%" }}>Name</th>
+                                                    <th style={{ background: "white", width: "50%" }}>Description</th>
+                                                    <th style={{ background: "white", width: "10%" }}>Size</th>
+                                                    <th style={{ background: "white", width: "10%" }}>Overlap</th>
+                                                    <th style={{ background: "white", width: "10%" }}>P-value</th>
+                                                </tr>
+                                            )}
+                                            components={{
+                                                Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                                            }}
+                                            itemContent={i => 
+                                                {
+                                                    const x = results[i];
+                                                    return (
+                                                        <>
+                                                            
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {formatName(x.name)}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {formatDescription(x.description)}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {x.size}
+                                                            </td>
+                                                            <td
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {"count" in x ? x.count : "n/a"}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                                                            </td>
+                                                        </>
+                                                    );
+                                                }
                                             }
+                                        />
+                                        {!initialized ?
+                                            <Card style={{ width: '50%', margin: "auto", wordBreak: "normal" }}>
+                                              <Card.Body>
+                                                <Card.Title>Welcome to the <strong>gesel</strong> demonstration app!</Card.Title>
+                                                <Card.Text>
+                                                  <p>
+                                                    Use the options on the left sidebar to search for gene sets based on a variety of filters.
+                                                    This includes the level of overlap with a user-supplied list of genes, or keywords in the gene set text and/or description.
+                                                  </p>
+                                                  <p>
+                                                    Examine the gene sets in tabular format, sorted based on the degree of enrichment with a user-supplied list of interesting genes.
+                                                    Clicking on a row will show more details on the right sidebar.
+                                                  </p>
+                                                  <p>
+                                                    Alternatively, examine the gene sets in a 2-dimensional embedding where similar gene sets are positioned adjacent to each other. 
+                                                    Each point represents a gene set and is colored by the percentage overlap with a user-supplied list.
+                                                  </p>
+                                                </Card.Text>
+                                              </Card.Body>
+                                            </Card>
+                                            :
+                                            ""
                                         }
-                                    />
+                                    </>
                             }
                         </>
                     }
