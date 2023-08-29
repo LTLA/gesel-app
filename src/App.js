@@ -118,6 +118,9 @@ function App() {
     function wipeOnSpeciesChange() {
         // console.log("am i getting called?")
         setResults([]);
+        setAllSets(null);
+        setHoverID(null);
+        setClickID(null);
         setTsne(null);
         setChosenGenes(null);
         setCollections(null);
