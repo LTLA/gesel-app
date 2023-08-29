@@ -535,6 +535,7 @@ function App() {
                                 </div>
                                 :
                                 <UDimPlot 
+                                    className="middle-panel"
                                     data={tsne} meta={results} 
                                     setHoverID={setHoverID} 
                                     setClickID={setClickID}
@@ -554,7 +555,8 @@ function App() {
                                         />
                                     </div>
                                     :
-                                    <TableVirtuoso
+                                    <TableVirtuoso 
+                                        className="middle-panel"
                                         totalCount={results.length}
                                         fixedHeaderContent={(index, user) => (
                                             <tr>
