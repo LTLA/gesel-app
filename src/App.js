@@ -108,6 +108,12 @@ function App() {
 
     const [ tsne, setTsne ] = useState(null);
 
+    const [ allSets, setAllSets ] = useState(null);
+
+    const [hoverID, setHoverID] = useState(null);
+
+    const [clickID, setClickID] = useState(null);
+
 
     function wipeOnSpeciesChange() {
         // console.log("am i getting called?")
@@ -123,7 +129,6 @@ function App() {
 
     function setCollections2(species) {
         gesel.fetchAllCollections(species).then(res => { 
-            // console.log(res);
             setCollections(res);
         });
     }
@@ -262,6 +267,11 @@ function App() {
         return true;
     }
 
+    async function fetchSets(species) {
+        const all_sets = await gesel.fetchAllSets(species);
+        setAllSets(all_sets);
+    }
+
     // Run once during the rendering.
     useEffect(() => {
         if (initial_search) {
@@ -269,6 +279,8 @@ function App() {
             searchSets(null);
 
             getEmbeddings(species);
+
+            fetchSets(species);
         }
 
         // console.log(species);
@@ -280,8 +292,15 @@ function App() {
         if (species) {
             setCollections2(species);
             getEmbeddings(species)
+            fetchSets(species);
         }
-    }, [species])
+    }, [species]);
+
+    useEffect(() => {
+        if (clickID !== null) {
+            focusSet(clickID, species);
+        }
+    }, [clickID]);
 
     function focusSet(id, species) {
         setLoadingGenes(true);
@@ -330,6 +349,22 @@ function App() {
         if (id == hoveringGene) {
             setHoveringGene(null);
         }
+    }
+
+    function formatName(text) {
+        if (text.match("^GO:[0-9]+$"))  {
+            return <a href={"http://amigo.geneontology.org/amigo/term/" + text} target="_blank">{text}</a> ;
+        }
+         
+        return text;
+    }
+
+    function formatDescription(text) {
+        if (text.match("^http[^ ]+$")) {
+            return <a href={text} target="_blank">link to description</a>;
+        }
+
+        return text;
     }
 
     return (
@@ -438,24 +473,31 @@ function App() {
                 fontSize: "small"
             }}>
                 <>
+                <div className='plot-header'>
                     <ButtonGroup className="mb-2">
-                        <ToggleButton
-                            type="radio"
-                            name="radio"
-                            value="Embeddings"
-                            checked={showDimPlot == true}
-                            onClick={(e) => setShowDimPlot(true)}
-                        > Embeddings
-                        </ToggleButton>
-                        <ToggleButton
-                            type="radio"
-                            name="radio"
-                            value="Table"
-                            checked={showDimPlot == false}
-                            onClick={(e) => setShowDimPlot(false)}
-                        > Table
-                        </ToggleButton>
-                    </ButtonGroup>
+                            <ToggleButton
+                                type="radio"
+                                name="radio"
+                                value="Embeddings"
+                                checked={showDimPlot == true}
+                                onClick={(e) => setShowDimPlot(true)}
+                            > Embeddings
+                            </ToggleButton>
+                            <ToggleButton
+                                type="radio"
+                                name="radio"
+                                value="Table"
+                                checked={showDimPlot == false}
+                                onClick={(e) => setShowDimPlot(false)}
+                            > Table
+                            </ToggleButton>
+                        </ButtonGroup>
+                        <div>
+                            {
+                                hoverID !== null && <p><span>{formatName(allSets[hoverID]?.name)}</span>: {formatDescription(allSets[hoverID]?.description)}</p>
+                            }
+                        </div>
+                    </div>
                     { showDimPlot == true ?
                         <>
                         {
@@ -471,7 +513,7 @@ function App() {
                                 </div>
                                 :
                                 <UDimPlot 
-                                    data={tsne} meta={results}/>}
+                                    data={tsne} meta={results} setHoverID={setHoverID} setClickID={setClickID}/>}
                                 </>
                         : 
                         <>
@@ -513,7 +555,7 @@ function App() {
                                                             onClick={() => focusSet(x.id, species)} 
                                                             style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                                                         >
-                                                            {x.name.match("^GO:[0-9]+$") ? <a href={"http://amigo.geneontology.org/amigo/term/" + x.name} target="_blank">{x.name}</a> : x.name}
+                                                            {formatName(x.name)}
                                                         </td>
                                                         <td 
                                                             onMouseEnter={() => setHovering(x.id)} 
@@ -521,7 +563,7 @@ function App() {
                                                             onClick={() => focusSet(x.id, species)} 
                                                             style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
                                                         >
-                                                            {x.description.match("^http[^ ]+$") ? <a href={x.description} target="_blank">link to description</a> : x.description}
+                                                            {formatDescription(x.description)}
                                                         </td>
                                                         <td 
                                                             onMouseEnter={() => setHovering(x.id)} 

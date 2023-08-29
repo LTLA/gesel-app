@@ -4,17 +4,19 @@ import Rainbow from "./rainbow";
 
 const UDimPlot = (props) => {
   const container = useRef();
+  const tooltip = useRef();
   let data = props?.data; // must contain x and y coordinates
   let meta = props?.meta; // if they performed a search
   const [scatterplot, setScatterplot] = useState(null);
+  const [mapMeta, setMapMeta] = useState(null);
 
   useEffect(() => {
     const containerEl = container.current;
+    const tooltipEl = tooltip.current;
     if (containerEl && props?.data) {
       let tmp_scatterplot = scatterplot;
       // only create the plot object once
       if (!tmp_scatterplot) {
-        
         containerEl.firstChild &&
           containerEl.removeChild(containerEl.firstChild);
 
@@ -26,20 +28,6 @@ const UDimPlot = (props) => {
         //   points?.selection?.indices.length > 0 &&
         //     props?.setSelectedPoints(points?.selection?.indices);
         // };
-
-        tmp_scatterplot.clickCallback = function(point_idx) {
-            console.log(point_idx)
-        }
-
-        tmp_scatterplot.hoverCallback = function (point_idx) {
-            if (point_idx) {
-              //   use some threshold (1.5)
-              if (point_idx.distance <= 1.5) {
-
-                console.log(point_idx)
-              }
-            }
-          };
       }
 
       tmp_scatterplot.setInput({
@@ -49,18 +37,19 @@ const UDimPlot = (props) => {
 
       let color = [];
       let size = 2;
+      let map_meta= {}
 
       if (meta && Array.isArray(meta) && meta.length > 0) {
-        let map_meta = {}
-        meta.forEach(x => map_meta[x.id] = x);
+        meta.forEach((x) => (map_meta[x.id] = x));
+        setMapMeta(map_meta);
 
-        let counts_vector = meta.map(x => x.count);
+        let counts_vector = meta.map((x) => x.count);
         let tmpgradient = new Rainbow();
         tmpgradient.setSpectrum("#F5F8FA", "#2965CC");
         tmpgradient.setNumberRange(0, Math.max(...counts_vector));
 
-        size = []
-        color = []
+        size = [];
+        color = [];
 
         for (let i = 0; i < data.x.length; i++) {
           if (i in map_meta) {
@@ -84,7 +73,7 @@ const UDimPlot = (props) => {
         } else {
           tmp_scatterplot.setState({
             color: color,
-            size: 2,
+            size: size,
           });
         }
       } else {
@@ -94,8 +83,25 @@ const UDimPlot = (props) => {
       }
 
       tmp_scatterplot.render();
+
+
+      tmp_scatterplot.hoverCallback = function (point_idx) {
+        if (point_idx) {
+          //   use some threshold (1.5)
+          if (point_idx.distance <= 0.02) {
+
+            if (map_meta) {
+              props?.setHoverID(point_idx.indices[0]);
+            }
+          }
+        } 
+      };
+
+      tmp_scatterplot.clickCallback = function(point_idx) {
+        props?.setClickID(point_idx.indices[0]);
+      }
     }
-  }, [props]);
+  }, [props?.data, props?.meta]);
 
   useEffect(() => {
     return () => {
