@@ -32,7 +32,7 @@ const UDimPlot = (props) => {
       });
 
       let color = [];
-      let size = 2;
+      let size = 1;
       let map_meta= {}
 
       if (meta && Array.isArray(meta) && meta.length > 0) {
@@ -74,7 +74,7 @@ const UDimPlot = (props) => {
         }
       } else {
         tmp_scatterplot.setState({
-          size: 2,
+          size: size,
         });
       }
 
@@ -109,6 +109,7 @@ const UDimPlot = (props) => {
   }, [scatterplot]);
 
   return (
+    <>
     <div className="udimplot-container">
       <div className="dim-plot">
         <div
@@ -120,6 +121,10 @@ const UDimPlot = (props) => {
         ></div>
       </div>
     </div>
+    <div>
+        Double click on the dots bruh.
+    </div>
+    </>
   );
 };
 
