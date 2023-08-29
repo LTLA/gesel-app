@@ -42,3 +42,37 @@
 .text-muted {
   font-size: small !important;
 }
+
+.udimplot-container,
+.dim-plot {
+  margin: 5px;
+  max-height: calc(100% - 50px) !important;
+  height: calc(100% - 50px) !important;
+}
+
+.plot-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-content: center;
+  max-height: 45px;
+}
+
+.plot-toggle {
+  width: 190px !important;
+}
+
+.plot-body {
+  /* flex: 3; */
+  word-wrap: break-word;
+  text-align: right;
+  max-width: calc(100% - 200px);
+}
+
+.middle-panel {
+  height: calc(100% - 45px) !important;
+}
+
+.empty-panel {
+  height: 20% !important; 
+}

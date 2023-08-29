@@ -1,12 +1,16 @@
 import './App.css';
 import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import Table from 'react-bootstrap/Table';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import ToggleButton from 'react-bootstrap/ToggleButton';
 import { TableVirtuoso } from "react-virtuoso";
 import ClipLoader from "react-spinners/ClipLoader";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from "react"
 import * as gesel from "gesel";
+import UDimPlot from './uDimPlot';
 
 // Seeing if we need to do anything.
 const params = new URLSearchParams(window.location.search);
@@ -87,7 +91,11 @@ function App() {
 
     const [ inactiveCollections, setInactiveCollections ] = useState(createIgnoreList());
 
+    const [ initialized, setInitialized ] = useState(false);
+
     const [ results, setResults ] = useState([]);
+
+    const [ resultsById, setResultsById ] = useState([]);
 
     const [ members, setMembers ] = useState([]);
 
@@ -101,12 +109,27 @@ function App() {
 
     const [ loadingGenes, setLoadingGenes ] = useState(false);
 
+    const [showDimPlot, setShowDimPlot] = useState(false);
+
+    const [ tsne, setTsne ] = useState(null);
+
+    const [ allSets, setAllSets ] = useState(null);
+
+    const [hoverID, setHoverID] = useState(null);
+
+    const [clickID, setClickID] = useState(null);
+
+
     function wipeOnSpeciesChange() {
-        console.log("am i getting called?")
+        // console.log("am i getting called?")
+        setResults([]);
+        setAllSets(null);
+        setHoverID(null);
+        setClickID(null);
+        setTsne(null);
         setChosenGenes(null);
         setCollections(null);
         setInactiveCollections(new Set);
-        setResults([]);
         setMembers([]);
         setSelected(null);
         setHovering(null);
@@ -114,9 +137,19 @@ function App() {
 
     function setCollections2(species) {
         gesel.fetchAllCollections(species).then(res => { 
-            console.log(res);
             setCollections(res);
         });
+    }
+
+    async function getEmbeddings(species) {
+        setLoadingSets(true);
+        let embeds = await gesel.fetchEmbeddingsForSpecies(species);
+
+
+        if (embeds && "x" in embeds && "y" in embeds) {
+            setTsne(embeds);
+            setLoadingSets(false);
+        }
     }
 
     async function searchSets(e) {
@@ -225,6 +258,12 @@ function App() {
 
         setResults(res);
 
+        let res_by_id = {};
+        for (var i = 0; i < res.length; i++) {
+            res_by_id[res[i].id] = i;
+        }
+        setResultsById(res_by_id);
+
         // Assembling a URL link.
         var query_params = [ "species=" + species ];
         if (searchGenes !== "") {
@@ -238,8 +277,14 @@ function App() {
         }
         window.history.pushState("search results", "", "?" + query_params.join("&"));
 
+        setInitialized(true);
         setLoadingSets(false);
         return true;
+    }
+
+    async function fetchSets(species) {
+        const all_sets = await gesel.fetchAllSets(species);
+        setAllSets(all_sets);
     }
 
     // Run once during the rendering.
@@ -247,6 +292,10 @@ function App() {
         if (initial_search) {
             initial_search = false;
             searchSets(null);
+
+            getEmbeddings(species);
+
+            fetchSets(species);
         }
 
         // console.log(species);
@@ -257,10 +306,19 @@ function App() {
     useEffect(() => {
         if (species) {
             setCollections2(species);
+            getEmbeddings(species)
+            fetchSets(species);
         }
-    }, [species])
+    }, [species]);
+
+    useEffect(() => {
+        if (clickID !== null) {
+            focusSet(clickID, species);
+        }
+    }, [clickID]);
 
     function focusSet(id, species) {
+        setClickID(id);
         setLoadingGenes(true);
         gesel.fetchSingleSet(species, id).then(async res => { 
             let current_collection = await gesel.fetchSingleCollection(species, res.collection);
@@ -307,6 +365,22 @@ function App() {
         if (id == hoveringGene) {
             setHoveringGene(null);
         }
+    }
+
+    function formatName(text) {
+        if (text.match("^GO:[0-9]+$"))  {
+            return <a href={"http://amigo.geneontology.org/amigo/term/" + text} target="_blank">{text}</a> ;
+        }
+         
+        return text;
+    }
+
+    function formatDescription(text) {
+        if (text.match("^http[^ ]+$")) {
+            return <a href={text} target="_blank">link to description</a>;
+        }
+
+        return text;
     }
 
     return (
@@ -414,84 +488,176 @@ function App() {
                 wordBreak: "break-all",
                 fontSize: "small"
             }}>
-                {
-                    loadingSets ? 
-                        <div style={{textAlign:"center"}}>
-                            <ClipLoader
-                            color="#000000"
-                            loading={true}
-                            size={150}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
-                            />
-                        </div>
-                        :
-                        <TableVirtuoso
-                            totalCount={results.length}
-                            fixedHeaderContent={(index, user) => (
-                                <tr>
-                                    <th style={{ background: "white", width: "20%" }}>Name</th>
-                                    <th style={{ background: "white", width: "50%" }}>Description</th>
-                                    <th style={{ background: "white", width: "10%" }}>Size</th>
-                                    <th style={{ background: "white", width: "10%" }}>Overlap</th>
-                                    <th style={{ background: "white", width: "10%" }}>P-value</th>
-                                </tr>
-                            )}
-                            components={{
-                                Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
-                            }}
-                            itemContent={i => 
-                                {
-                                    const x = results[i];
-                                    return (
-                                        <>
-                                            
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.name.match("^GO:[0-9]+$") ? <a href={"http://amigo.geneontology.org/amigo/term/" + x.name} target="_blank">{x.name}</a> : x.name}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.description.match("^http[^ ]+$") ? <a href={x.description} target="_blank">link to description</a> : x.description}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {x.size}
-                                            </td>
-                                            <td
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {"count" in x ? x.count : "n/a"}
-                                            </td>
-                                            <td 
-                                                onMouseEnter={() => setHovering(x.id)} 
-                                                onMouseLeave={() => unsetHovering(x.id)} 
-                                                onClick={() => focusSet(x.id, species)} 
-                                                style={{"backgroundColor": defineBackground(x.id)}}
-                                            >
-                                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
-                                            </td>
-                                        </>
-                                    );
-                                }
+                <>
+                <div className='plot-header'>
+                    <ButtonGroup className="mb-2 plot-toggle">
+                            <ToggleButton
+                                type="radio"
+                                name="radio"
+                                value="Table"
+                                checked={showDimPlot == false}
+                                onClick={(e) => setShowDimPlot(false)}
+                            > Table
+                            </ToggleButton>
+                            <ToggleButton
+                                type="radio"
+                                name="radio"
+                                value="Embedding"
+                                checked={showDimPlot == true}
+                                onClick={(e) => setShowDimPlot(true)}
+                            > Embedding
+                            </ToggleButton>
+                        </ButtonGroup>
+                        <div className='plot-body'>
+                            {showDimPlot ? 
+                                <strong>Double click a point for details!</strong>
+                                :
+                                (results.length > 0 ?
+                                    <strong>Click a row for details!</strong>
+                                    :
+                                    ""
+                                )
                             }
-                        />
-                }
+                            {
+                                hoverID !== null && 
+                                <p>
+                                    <span>{formatName(allSets[hoverID]?.name)}</span>: {formatDescription(allSets[hoverID]?.description)}{" "}
+                                    ({hoverID in resultsById ? results[resultsById[hoverID]].count : 0}/{allSets[hoverID].size},{" "}
+                                    p={hoverID in resultsById ? results[resultsById[hoverID]].pvalue.toExponential(3) : 1})
+                                </p>
+                            }
+                        </div>
+                    </div>
+                    { showDimPlot == true ?
+                        <>
+                        {
+                            loadingSets ? 
+                                <div style={{textAlign:"center"}}>
+                                    <ClipLoader
+                                    color="#000000"
+                                    loading={true}
+                                    size={150}
+                                    aria-label="Loading Spinner"
+                                    data-testid="loader"
+                                    />
+                                </div>
+                                :
+                                <UDimPlot 
+                                    className="middle-panel"
+                                    data={tsne} meta={results} 
+                                    setHoverID={setHoverID} 
+                                    setClickID={setClickID}
+                                    clickID={clickID}/>}
+                                </>
+                        : 
+                        <>
+                            {
+                                loadingSets ? 
+                                    <div style={{textAlign:"center"}}>
+                                        <ClipLoader
+                                        color="#000000"
+                                        loading={true}
+                                        size={150}
+                                        aria-label="Loading Spinner"
+                                        data-testid="loader"
+                                        />
+                                    </div>
+                                    :
+                                    <>
+                                        <TableVirtuoso 
+                                            className={results.length > 0 ? "middle-panel" : "empty-panel"}
+                                            totalCount={results.length}
+                                            fixedHeaderContent={(index, user) => (
+                                                <tr>
+                                                    <th style={{ background: "white", width: "20%" }}>Name</th>
+                                                    <th style={{ background: "white", width: "50%" }}>Description</th>
+                                                    <th style={{ background: "white", width: "10%" }}>Size</th>
+                                                    <th style={{ background: "white", width: "10%" }}>Overlap</th>
+                                                    <th style={{ background: "white", width: "10%" }}>P-value</th>
+                                                </tr>
+                                            )}
+                                            components={{
+                                                Table: (props) => <Table {...props} style={{ borderCollapse: 'separate' }} />
+                                            }}
+                                            itemContent={i => 
+                                                {
+                                                    const x = results[i];
+                                                    return (
+                                                        <>
+                                                            
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {formatName(x.name)}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"wordWrap": "break-word", "backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {formatDescription(x.description)}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {x.size}
+                                                            </td>
+                                                            <td
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {"count" in x ? x.count : "n/a"}
+                                                            </td>
+                                                            <td 
+                                                                onMouseEnter={() => setHovering(x.id)} 
+                                                                onMouseLeave={() => unsetHovering(x.id)} 
+                                                                onClick={() => focusSet(x.id, species)} 
+                                                                style={{"backgroundColor": defineBackground(x.id)}}
+                                                            >
+                                                                {"pvalue" in x ? x.pvalue.toExponential(3) : "n/a"}
+                                                            </td>
+                                                        </>
+                                                    );
+                                                }
+                                            }
+                                        />
+                                        {!initialized ?
+                                            <Card style={{ width: '50%', margin: "auto", wordBreak: "normal" }}>
+                                              <Card.Body>
+                                                <Card.Title>Welcome to the <strong>gesel</strong> demonstration app!</Card.Title>
+                                                <Card.Text>
+                                                  <p>
+                                                    Use the options on the left sidebar to search for gene sets based on a variety of filters.
+                                                    This includes the level of overlap with a user-supplied list of genes, or keywords in the gene set text and/or description.
+                                                  </p>
+                                                  <p>
+                                                    Examine the gene sets in tabular format, sorted based on the degree of enrichment with a user-supplied list of interesting genes.
+                                                    Clicking on a row will show more details on the right sidebar.
+                                                  </p>
+                                                  <p>
+                                                    Alternatively, examine the gene sets in a 2-dimensional embedding where similar gene sets are positioned adjacent to each other. 
+                                                    Each point represents a gene set and is colored by the percentage overlap with a user-supplied list.
+                                                  </p>
+                                                </Card.Text>
+                                              </Card.Body>
+                                            </Card>
+                                            :
+                                            ""
+                                        }
+                                    </>
+                            }
+                        </>
+                    }
+                </>
             </div>
 
             <div style={{
