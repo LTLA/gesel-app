@@ -89,6 +89,8 @@ const UDimPlot = (props) => {
             if (map_meta) {
               props?.setHoverID(point_idx.indices[0]);
             }
+          } else {
+              props?.setHoverID(null);
           }
         } 
       };

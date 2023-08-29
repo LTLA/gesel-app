@@ -92,6 +92,8 @@ function App() {
 
     const [ results, setResults ] = useState([]);
 
+    const [ resultsById, setResultsById ] = useState([]);
+
     const [ members, setMembers ] = useState([]);
 
     const [ selected, setSelected ] = useState(null);
@@ -104,7 +106,7 @@ function App() {
 
     const [ loadingGenes, setLoadingGenes ] = useState(false);
 
-    const [showDimPlot, setShowDimPlot] = useState(true);
+    const [showDimPlot, setShowDimPlot] = useState(false);
 
     const [ tsne, setTsne ] = useState(null);
 
@@ -252,6 +254,12 @@ function App() {
         }
 
         setResults(res);
+
+        let res_by_id = {};
+        for (var i = 0; i < res.length; i++) {
+            res_by_id[res[i].id] = i;
+        }
+        setResultsById(res_by_id);
 
         // Assembling a URL link.
         var query_params = [ "species=" + species ];
@@ -481,23 +489,33 @@ function App() {
                             <ToggleButton
                                 type="radio"
                                 name="radio"
-                                value="Embeddings"
-                                checked={showDimPlot == true}
-                                onClick={(e) => setShowDimPlot(true)}
-                            > Embeddings
-                            </ToggleButton>
-                            <ToggleButton
-                                type="radio"
-                                name="radio"
                                 value="Table"
                                 checked={showDimPlot == false}
                                 onClick={(e) => setShowDimPlot(false)}
                             > Table
                             </ToggleButton>
+                            <ToggleButton
+                                type="radio"
+                                name="radio"
+                                value="Embedding"
+                                checked={showDimPlot == true}
+                                onClick={(e) => setShowDimPlot(true)}
+                            > Embedding
+                            </ToggleButton>
                         </ButtonGroup>
                         <div className='plot-body'>
+                            {showDimPlot ? 
+                                <strong>Double click a point for details!</strong>
+                                :
+                                <strong>Click a row for details!</strong>
+                            }
                             {
-                                hoverID !== null && <p><span>{formatName(allSets[hoverID]?.name)}</span>: {formatDescription(allSets[hoverID]?.description)}</p>
+                                hoverID !== null && 
+                                <p>
+                                    <span>{formatName(allSets[hoverID]?.name)}</span>: {formatDescription(allSets[hoverID]?.description)}{" "}
+                                    ({hoverID in resultsById ? results[resultsById[hoverID]].count : 0}/{allSets[hoverID].size},{" "}
+                                    p={hoverID in resultsById ? results[resultsById[hoverID]].pvalue.toExponential(3) : 1})
+                                </p>
                             }
                         </div>
                     </div>
