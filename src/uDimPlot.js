@@ -43,18 +43,18 @@ const UDimPlot = (props) => {
         meta.forEach((x) => (map_meta[x.id] = x));
         setMapMeta(map_meta);
 
-        let counts_vector = meta.map((x) => x.count);
+        let counts_vector = meta.map((x) => x.count*100/x.size);
         let tmpgradient = new Rainbow();
         tmpgradient.setSpectrum("#F5F8FA", "#2965CC");
-        tmpgradient.setNumberRange(0, Math.max(...counts_vector));
+        tmpgradient.setNumberRange(Math.min(...counts_vector), Math.max(...counts_vector));
 
         size = [];
         color = [];
 
         for (let i = 0; i < data.x.length; i++) {
           if (i in map_meta) {
-            color.push("#" + tmpgradient.colorAt(map_meta[i].count));
-            size.push(3);
+            color.push("#" + tmpgradient.colorAt(map_meta[i].count*100/map_meta[i].size));
+            size.push(5);
           } else {
             color.push("#" + tmpgradient.colorAt(0));
             size.push(1);
